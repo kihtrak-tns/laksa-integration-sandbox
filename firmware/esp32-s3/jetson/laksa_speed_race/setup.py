@@ -55,6 +55,10 @@ setup(
             "c1_gym_adapter = laksa_speed_race.gym_adapter_node:main",
             "c1_nav2_raceline = laksa_speed_race.nav2_raceline_node:main",
             "c1_nav2_ackermann_adapter = laksa_speed_race.nav2_ackermann_adapter_node:main",
+            "wall_follow_controller = laksa_speed_race.wall_follow_ros:controller_main",
+            "wall_follow_gym_mock = laksa_speed_race.wall_follow_ros:simulator_main",
+            "wall_follow_campaign = laksa_speed_race.wall_follow_sim:main",
+            "wall_follow_replay = laksa_speed_race.wall_follow_replay:main",
         ],
     },
 )

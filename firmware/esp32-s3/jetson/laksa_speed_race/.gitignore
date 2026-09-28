@@ -1,7 +1,9 @@
 build/
 install/
 log/
-results/
+results/*
+!results/wall_follow/
+results/wall_follow/maps/
 __pycache__/
 .pytest_cache/
 *.pyc

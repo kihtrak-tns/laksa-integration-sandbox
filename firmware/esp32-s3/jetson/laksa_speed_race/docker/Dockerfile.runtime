@@ -5,7 +5,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       build-essential git libeigen3-dev patch python3-pip \
       python3-colcon-common-extensions \
       ros-humble-ackermann-msgs ros-humble-eigen3-cmake-module \
-      ros-humble-nav-msgs ros-humble-tf2-ros ros-humble-visualization-msgs && \
+      ros-humble-nav-msgs ros-humble-sensor-msgs ros-humble-tf2-ros ros-humble-visualization-msgs && \
     rm -rf /var/lib/apt/lists/*
 
 COPY docker/requirements-runtime.lock /tmp/requirements.lock
