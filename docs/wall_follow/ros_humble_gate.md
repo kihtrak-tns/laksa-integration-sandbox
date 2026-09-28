@@ -186,15 +186,21 @@ The operator then observed this episode's `/sim/laksa/gym_status` with
 `gym_steps=227059`, `rejected_terminal_requests=0`, and
 `terminal_reason=null`. The large step count measures time spent stepping,
 not traversal or lap completion. In that running container,
-`ros2 topic hz /sim/laksa/scan` produced these ten average-rate windows:
+`ros2 topic hz /sim/laksa/scan` produced these ten windows (seconds for
+interval statistics):
 
-```text
-19.969, 19.983, 19.979, 19.988, 19.991,
-19.991, 19.995, 19.987, 19.994, 19.995 Hz
-```
-
-Reported inter-message extremes across these windows were 0.043–0.055 s;
-the last output used a 207-message window. This verifies an approximately
+| Window | Average Hz | Min interval | Max interval | Std dev | Samples |
+|---:|---:|---:|---:|---:|---:|
+| 1 | 19.969 | 0.046 | 0.053 | 0.00168 | 21 |
+| 2 | 19.983 | 0.044 | 0.055 | 0.00221 | 41 |
+| 3 | 19.979 | 0.044 | 0.055 | 0.00202 | 61 |
+| 4 | 19.988 | 0.044 | 0.055 | 0.00188 | 82 |
+| 5 | 19.991 | 0.044 | 0.055 | 0.00171 | 103 |
+| 6 | 19.991 | 0.043 | 0.055 | 0.00172 | 124 |
+| 7 | 19.995 | 0.043 | 0.055 | 0.00165 | 145 |
+| 8 | 19.987 | 0.043 | 0.055 | 0.00163 | 165 |
+| 9 | 19.994 | 0.043 | 0.055 | 0.00164 | 186 |
+| 10 | 19.995 | 0.043 | 0.055 | 0.00156 | 207 | This verifies an approximately
 20 Hz ROS scan stream in the operator's rebuilt container. The earlier
 19.967–20.001 Hz motion-request observations belonged to an unidentified
 older image; the request rate has not yet been remeasured on this rebuilt
