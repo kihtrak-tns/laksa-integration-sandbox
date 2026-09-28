@@ -30,6 +30,8 @@ from .runtime_preflight import (
 F1TENTH_GYM_SHA = "bdaec1420c3b0f103858d289866d0d4e2e597c30"
 DT_S = 0.01
 MAX_SPEED_MPS = 1.0
+MAX_STEERING_RAD = 0.288
+SHORT_HORIZON_STEPS = 100
 
 
 REQUIRED_READY_NODES = frozenset(
@@ -175,7 +177,6 @@ def validate_zero_step_artifacts(output_dir: Path) -> dict[str, object]:
         "safety_veto_pass": True,
     }
 
-
 def validate_one_step_artifacts(output_dir: Path) -> dict[str, object]:
     """Prove exactly one state-command-step transition and no feedback of N+1."""
 
@@ -204,6 +205,8 @@ def validate_one_step_artifacts(output_dir: Path) -> dict[str, object]:
         "invalid_command_events": 0,
         "final_applied_command": {"steering_rad": 0.0, "speed_mps": 0.0},
     }
+
+
     for key, expected in required.items():
         if summary.get(key) != expected:
             raise QualificationHarnessError(
@@ -293,11 +296,199 @@ def validate_one_step_artifacts(output_dir: Path) -> dict[str, object]:
     }
 
 
+def _csv_rows(path: Path) -> list[dict[str, str]]:
+    if not path.is_file():
+        raise QualificationHarnessError(f"required evidence artifact is missing: {path.name}")
+    with path.open(newline="", encoding="utf-8") as stream:
+        return list(csv.DictReader(stream))
+
+
+def _truth(value: object) -> bool:
+    return str(value).strip().lower() in {"1", "true", "yes"}
+
+
+def validate_short_horizon_artifacts(
+    output_dir: Path,
+    *,
+    shutdown: Mapping[str, object],
+    step_limit: int = SHORT_HORIZON_STEPS,
+) -> dict[str, object]:
+    """Validate a bounded lockstep run and identify the first early fault."""
+    summary_path = output_dir / "summary.json"
+    if not summary_path.is_file():
+        raise QualificationHarnessError("short-horizon summary.json was not produced")
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    telemetry = _csv_rows(output_dir / "controller_telemetry.csv")
+    commands = _csv_rows(output_dir / "commands.csv")
+    trajectory = _csv_rows(output_dir / "trajectory.csv")
+    events = _csv_rows(output_dir / "events.csv")
+
+    steps = int(summary.get("simulator_step_count", -1))
+    candidates: list[tuple[int, str]] = []
+    if int(summary.get("qualification_step_limit", -1)) != step_limit:
+        candidates.append((1, "qualification_step_limit_mismatch"))
+    if not math.isclose(float(summary.get("dt_s", math.nan)), DT_S, rel_tol=0.0, abs_tol=1e-12):
+        candidates.append((1, "simulator_dt_mismatch"))
+    try:
+        sim_time_s = float(summary["sim_time_s"])
+    except (KeyError, TypeError, ValueError):
+        sim_time_s = math.nan
+    if not math.isfinite(sim_time_s) or sim_time_s < 0.0 or sim_time_s > step_limit * DT_S + 1e-9:
+        candidates.append((max(min(steps, step_limit) + 1, 1), "simulated_time_limit_exceeded"))
+    for row in trajectory:
+        step = int(row["step"])
+        if _truth(row.get("collision")):
+            candidates.append((step, "collision"))
+        if _truth(row.get("off_track")):
+            candidates.append((step, "off_track"))
+    for row in events:
+        event = row.get("event", "")
+        if event in {"collision_edge", "off_track_edge"}:
+            candidates.append((int(row["step"]), "collision" if event == "collision_edge" else "off_track"))
+
+    fault = str(summary.get("fault") or "")
+    fault_map = {
+        "non_finite_command": "invalid_command",
+        "reverse_command": "invalid_command",
+        "command_outside_c1_limits": "invalid_command",
+        "physical_feasibility_violation": "invalid_command",
+        "collision": "collision",
+        "off_track": "off_track",
+        "independent_full_footprint_safety_veto": "safety_veto",
+        "state_stamp_mismatch": "mismatched_state_stamp",
+        "non_monotonic_state_stamp": "mismatched_state_stamp",
+        "invalid_zero_state_stamp": "invalid_state_stamp",
+    }
+    if fault and fault != "qualification_step_limit_reached":
+        candidates.append((steps + 1 if fault in fault_map and fault_map[fault] in {"invalid_command", "safety_veto"} else max(steps, 1), fault_map.get(fault, fault)))
+
+    violations: list[tuple[int, str]] = []
+    for index, row in enumerate(telemetry, start=1):
+        try:
+            speed = float(row["upstream_linear_mps"])
+            steering = float(row["delta_applied_rad"])
+        except (KeyError, TypeError, ValueError):
+            violations.append((index, "invalid_command"))
+            continue
+        if not math.isfinite(speed) or not math.isfinite(steering) or not (0.0 <= speed <= MAX_SPEED_MPS) or abs(steering) > MAX_STEERING_RAD:
+            violations.append((index, "invalid_command"))
+        if row.get("safety_veto_pass", "").strip().lower() not in {"1", "true"}:
+            violations.append((index, "safety_veto"))
+        if row.get("physical_feasibility", "").strip().lower() not in {"1", "true"}:
+            violations.append((index, "invalid_command"))
+
+    for index, row in enumerate(commands, start=1):
+        for name in ("requested_speed_mps", "applied_speed_mps", "requested_steering_rad", "applied_steering_rad"):
+            try:
+                value = float(row[name])
+            except (KeyError, TypeError, ValueError):
+                violations.append((index, "invalid_command"))
+                continue
+            if not math.isfinite(value):
+                violations.append((index, "invalid_command"))
+            elif "speed" in name and not 0.0 <= value <= MAX_SPEED_MPS:
+                violations.append((index, "invalid_command"))
+            elif "steering" in name and abs(value) > MAX_STEERING_RAD:
+                violations.append((index, "invalid_command"))
+
+    candidates.extend(violations)
+    if int(summary.get("collision_edges", 0)) > 0 and not any(kind == "collision" for _, kind in candidates):
+        candidates.append((max(steps, 1), "collision"))
+    if int(summary.get("off_track_events", 0)) > 0 and not any(kind == "off_track" for _, kind in candidates):
+        candidates.append((max(steps, 1), "off_track"))
+    if int(summary.get("invalid_command_events", 0)) > 0 and not any(kind == "invalid_command" for _, kind in candidates):
+        candidates.append((steps + 1, "invalid_command"))
+    if int(summary.get("duplicate_state_stamp_rejections", 0)) > 0:
+        candidates.append((max(steps + 1, 1), "duplicate_state_stamp"))
+    if int(summary.get("state_stamp_mismatch_events", 0)) > 0:
+        candidates.append((max(steps + 1, 1), "mismatched_state_stamp"))
+
+    telemetry_stamps = [int(row["state_stamp_ns"]) for row in telemetry if row.get("state_stamp_ns", "").strip()]
+    if len(telemetry_stamps) != len(telemetry) or any(stamp <= 0 for stamp in telemetry_stamps):
+        candidates.append((max(steps + 1, 1), "invalid_state_stamp"))
+    if len(set(telemetry_stamps)) != len(telemetry_stamps):
+        candidates.append((max(steps + 1, 1), "duplicate_state_stamp"))
+    for index, (left, right) in enumerate(zip(telemetry_stamps, telemetry_stamps[1:]), start=2):
+        if right <= left:
+            candidates.append((index, "duplicate_state_stamp" if right == left else "mismatched_state_stamp"))
+    telemetry_sequences = [int(row["sequence"]) for row in telemetry if row.get("sequence", "").strip()]
+    if len(telemetry_sequences) != len(telemetry) or telemetry_sequences != list(range(1, len(telemetry) + 1)):
+        candidates.append((max(min(len(telemetry_sequences), steps) + 1, 1), "command_step_order"))
+
+    expected_steps = list(range(1, steps + 1))
+    command_steps = [int(row["step"]) for row in commands]
+    trajectory_steps = [int(row["step"]) for row in trajectory]
+    if command_steps != expected_steps or trajectory_steps != expected_steps:
+        candidates.append((max(min(len(commands), len(trajectory)) + 1, 1), "command_step_order"))
+    if len(telemetry) < steps or len(telemetry) > steps + 1:
+        candidates.append((max(min(len(telemetry), steps) + 1, 1), "command_step_order"))
+    accepted = int(summary.get("accepted_drive_requests", -1))
+    if accepted != len(commands) and not (accepted == len(commands) + 1 and fault in fault_map):
+        candidates.append((max(min(accepted, len(commands)) + 1, 1), "command_step_order"))
+    for command, state in zip(commands, trajectory):
+        if not math.isclose(float(command["sim_time_s"]), float(state["sim_time_s"]), rel_tol=0.0, abs_tol=1e-9):
+            candidates.append((int(command["step"]), "command_step_mismatch"))
+
+    if int(summary.get("steps_after_terminal", -1)) != 0:
+        candidates.append((steps + 1, "steps_after_terminal"))
+    if summary.get("final_applied_command") != {"steering_rad": 0.0, "speed_mps": 0.0}:
+        candidates.append((max(steps, 1), "final_applied_command_not_zero"))
+    if not _truth(summary.get("terminal_zero_observed")):
+        candidates.append((max(steps, 1), "terminal_zero_not_observed"))
+    if not _truth(summary.get("state_stamp_causality_required")):
+        candidates.append((1, "state_stamp_causality_not_required"))
+    if not _truth(shutdown.get("success")) or list(shutdown.get("remaining_pids", [])):
+        candidates.append((max(steps, 1), "owned_processes_remain"))
+
+    first_fault = None
+    if candidates:
+        first_step, first_reason = min(candidates, key=lambda item: (item[0], item[1]))
+        first_fault = {"reason": first_reason, "step": first_step}
+
+    clean_limit = (
+        steps == step_limit
+        and len(commands) == step_limit
+        and len(trajectory) == step_limit
+        and len(telemetry) == step_limit
+        and summary.get("qualification_limit_reached") is True
+        and fault == "qualification_step_limit_reached"
+        and int(summary.get("accepted_drive_requests", -1)) == step_limit
+        and int(summary.get("duplicate_state_stamp_rejections", -1)) == 0
+        and int(summary.get("state_stamp_mismatch_events", -1)) == 0
+        and int(summary.get("collision_edges", -1)) == 0
+        and int(summary.get("off_track_events", -1)) == 0
+        and int(summary.get("invalid_command_events", -1)) == 0
+        and int(summary.get("steps_after_terminal", -1)) == 0
+        and not candidates
+    )
+    if not clean_limit and not candidates:
+        if steps < step_limit:
+            candidates.append((steps + 1, fault or "unexpected_early_termination"))
+        elif steps > step_limit:
+            candidates.append((step_limit + 1, "step_limit_exceeded"))
+        else:
+            candidates.append((step_limit, fault or "qualification_limit_not_reached"))
+        first_step, first_reason = min(candidates, key=lambda item: (item[0], item[1]))
+        first_fault = {"reason": first_reason, "step": first_step}
+    return {
+        "outcome": "CLEAN_LIMIT_REACHED" if clean_limit else "EARLY_FAULT_OR_INVALID_EVIDENCE",
+        "step_limit": step_limit,
+        "simulator_steps": steps,
+        "dt_s": DT_S,
+        "maximum_simulated_time_s": step_limit * DT_S,
+        "controller_evaluations": len(telemetry),
+        "command_rows": len(commands),
+        "trajectory_rows": len(trajectory),
+        "summary_fault": fault or None,
+        "first_fault": first_fault,
+        "owned_processes_remaining": list(shutdown.get("remaining_pids", [])),
+        "shutdown_success": bool(shutdown.get("success")),
+    }
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--mode",
-        choices=("preflight", "readiness", "zero-step", "one-step"),
+        choices=("preflight", "readiness", "zero-step", "one-step", "short-horizon"),
         required=True,
     )
     parser.add_argument("--workspace", default="/tmp/laksa-c1.2-runtime")
@@ -320,7 +511,10 @@ def _parser() -> argparse.ArgumentParser:
 def _launch_command(args: argparse.Namespace) -> list[str]:
     include_gym = "false" if args.mode == "readiness" else "true"
     gym_start_delay_s = "0.0" if args.mode == "readiness" else "30.0"
-    qualification_step_limit = "1" if args.mode == "one-step" else "0"
+    qualification_step_limit = (
+        str(SHORT_HORIZON_STEPS) if args.mode == "short-horizon"
+        else "1" if args.mode == "one-step" else "0"
+    )
     return [
         "ros2",
         "launch",
@@ -335,6 +529,8 @@ def _launch_command(args: argparse.Namespace) -> list[str]:
 
 def main(argv: Iterable[str] | None = None) -> int:
     args = _parser().parse_args(argv)
+    if args.mode == "short-horizon" and (not math.isfinite(args.timeout) or args.timeout <= 0.0):
+        raise SystemExit("short-horizon --timeout must be a finite positive number")
     output = Path(args.output_dir)
     output.mkdir(parents=True, exist_ok=True)
     evidence_path = output / "harness_result.json"
@@ -343,6 +539,7 @@ def main(argv: Iterable[str] | None = None) -> int:
 
     evidence: dict[str, object] = {
         "mode": args.mode,
+        "tested_commit": os.environ.get("LAKSA_GIT_SHA", "UNKNOWN"),
         "domain_id": None,
         "ready_state_criteria": {
             "nodes": sorted(REQUIRED_READY_NODES),
@@ -419,7 +616,7 @@ def main(argv: Iterable[str] | None = None) -> int:
                     )
                 if args.mode == "zero-step":
                     evidence["zero_step"] = validate_zero_step_artifacts(output)
-                else:
+                elif args.mode == "one-step":
                     evidence["one_step"] = validate_one_step_artifacts(output)
 
             shutdown = session.shutdown()
@@ -433,6 +630,20 @@ def main(argv: Iterable[str] | None = None) -> int:
             }
             if not shutdown.success:
                 raise QualificationHarnessError("owned runtime process group did not terminate")
+            if args.mode == "short-horizon":
+                result = validate_short_horizon_artifacts(
+                    output,
+                    shutdown=evidence["shutdown"],
+                )
+                evidence["short_horizon"] = result
+                if result["outcome"] != "CLEAN_LIMIT_REACHED":
+                    first_fault = result.get("first_fault") or {}
+                    evidence["error"] = (
+                        "short-horizon ended before a clean 100-step limit: "
+                        f"{first_fault.get('reason', result.get('summary_fault', 'invalid evidence'))} "
+                        f"at step {first_fault.get('step', 'unknown')}"
+                    )
+                    return 1
         evidence["status"] = "PASS"
         return 0
     except (QualificationHarnessError, RosDomainError, RuntimePreflightError) as error:
@@ -444,6 +655,40 @@ def main(argv: Iterable[str] | None = None) -> int:
                 "phase": shutdown.phase,
                 "remaining_pids": shutdown.remaining_pids,
                 "leader_returncode": shutdown.leader_returncode,
+            }
+        if args.mode == "short-horizon":
+            summary_path = output / "summary.json"
+            observed_steps = None
+            observed_fault = None
+            if summary_path.is_file():
+                try:
+                    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+                    observed_steps = int(summary.get("simulator_step_count", 0))
+                    observed_fault = summary.get("fault")
+                except (ValueError, TypeError, json.JSONDecodeError):
+                    pass
+            message = str(error)
+            if "did not terminate in time" in message:
+                reason = "timeout"
+                step = observed_steps
+            elif "exited with status" in message:
+                reason = "crashed_child"
+                step = observed_steps if observed_steps else None
+            elif observed_fault:
+                reason = str(observed_fault)
+                step = observed_steps if observed_steps else None
+            else:
+                reason = str(observed_fault or "qualification_failed")
+                step = observed_steps if observed_steps else None
+            evidence["short_horizon"] = {
+                "outcome": "TIMEOUT" if reason == "timeout" else "CRASHED_CHILD_OR_EARLY_FAULT",
+                "step_limit": SHORT_HORIZON_STEPS,
+                "simulator_steps": observed_steps,
+                "dt_s": DT_S,
+                "maximum_simulated_time_s": SHORT_HORIZON_STEPS * DT_S,
+                "first_fault": {"reason": reason, "step": step},
+                "owned_processes_remaining": evidence.get("failure_shutdown", {}).get("remaining_pids", []),
+                "shutdown_success": evidence.get("failure_shutdown", {}).get("success", False),
             }
         return 1
     finally:
