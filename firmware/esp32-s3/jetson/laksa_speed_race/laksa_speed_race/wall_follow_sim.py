@@ -369,8 +369,25 @@ def run_case(
     finally:
         env.close()
 
-    request_zero_row = _zero_row(rows, "requested_speed_mps", 1e-6, fault_start_s)
-    applied_zero_row = _zero_row(rows, "applied_speed_mps", 1e-3, fault_start_s)
+    obstacle_case = fault in {"obstacle_ahead", "opening_obstacle"}
+    # Obstacle detection begins at the slowdown threshold and may legitimately
+    # precede the eventual hard-stop request by more than the two-second fault
+    # watchdog evidence window.  Measure detection->request over the whole
+    # bounded approach, then request->applied-zero in its own short window.
+    request_zero_row = _zero_row(
+        rows,
+        "requested_speed_mps",
+        1e-6,
+        fault_start_s,
+        window_s=5.0 if obstacle_case else 2.0,
+    )
+    applied_zero_row = _zero_row(
+        rows,
+        "applied_speed_mps",
+        1e-3,
+        first_stop_request_s if obstacle_case else fault_start_s,
+        window_s=2.0,
+    )
     request_zero_s = None if request_zero_row is None else float(request_zero_row["sim_time_s"])
     applied_zero_s = None if applied_zero_row is None else float(applied_zero_row["sim_time_s"])
     stop_distance = None
@@ -430,7 +447,16 @@ def run_case(
         "applied_steering_min_rad": min((row["applied_steering_rad"] for row in rows), default=0.0),
         "applied_steering_max_rad": max((row["applied_steering_rad"] for row in rows), default=0.0),
         "fault_start_s": fault_start_s,
+        "first_obstacle_detection_s": fault_start_s if obstacle_case else None,
         "first_stop_request_s": first_stop_request_s,
+        "time_from_obstacle_detection_to_stop_request_s": (
+            None if not obstacle_case or fault_start_s is None or first_stop_request_s is None
+            else max(0.0, first_stop_request_s - fault_start_s)
+        ),
+        "time_from_obstacle_detection_to_zero_applied_s": (
+            None if not obstacle_case or fault_start_s is None or applied_zero_s is None
+            else max(0.0, applied_zero_s - fault_start_s)
+        ),
         "time_from_stop_request_to_zero_applied_s": (
             None if first_stop_request_s is None or applied_zero_s is None
             else max(0.0, applied_zero_s - first_stop_request_s)
