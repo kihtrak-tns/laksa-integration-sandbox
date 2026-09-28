@@ -10,9 +10,11 @@ import json
 import math
 from pathlib import Path
 import tempfile
+import uuid
 
-from .wall_follow_core import MockEpisodeAuthority, MotionRequest, ScanFrame, WallFollowController
+from .wall_follow_core import MockEpisodeAuthority, MotionRequest, WallFollowController
 from .wall_follow_maps import campaign_profiles, generate_corridor_map
+from .wall_follow_scan_adapter import update_from_laserscan
 from .wall_follow_sim import DT_S, SCAN_INTERVAL_STEPS, create_wall_environment
 
 
@@ -21,6 +23,7 @@ ODOM_TOPIC = "/sim/laksa/odom"
 REQUEST_TOPIC = "/sim/laksa/motion_request"
 APPLIED_TOPIC = "/sim/laksa/drive_applied"
 STATUS_TOPIC = "/sim/laksa/wall_follow_status"
+GYM_STATUS_TOPIC = "/sim/laksa/gym_status"
 MAP_FRAME = "sim_laksa_map"
 BASE_FRAME = "sim_laksa_base_link"
 LIDAR_FRAME = "sim_laksa_lidar"
@@ -70,20 +73,7 @@ def controller_main() -> None:
 
         def on_scan(self, message: LaserScan) -> None:
             now_s = self.seconds()
-            stamp_s = message.header.stamp.sec + message.header.stamp.nanosec * 1e-9
-            request, diagnostics = self.controller.update(
-                ScanFrame(
-                    message.ranges,
-                    message.angle_min,
-                    message.angle_increment,
-                    message.range_min,
-                    message.range_max,
-                    stamp_s,
-                    now_s,
-                    frame_id=message.header.frame_id,
-                ),
-                now_s,
-            )
+            request, diagnostics = update_from_laserscan(self.controller, message, now_s)
             self.last_receive_s = now_s
             self.publish_request(request)
             status = String()
@@ -118,6 +108,7 @@ def simulator_main() -> None:
     from nav_msgs.msg import Odometry
     from rclpy.node import Node
     from sensor_msgs.msg import LaserScan
+    from std_msgs.msg import String
     from tf2_ros import TransformBroadcaster
 
     class SimulatorNode(Node):
@@ -125,28 +116,47 @@ def simulator_main() -> None:
             super().__init__("wall_follow_gym_mock_sim_only")
             self.declare_parameter("map_profile", "continuous_wall_30in")
             self.declare_parameter("seed", 101)
+            self.declare_parameter("collision_test", False)
             profile_name = str(self.get_parameter("map_profile").value)
             profiles = {profile.name: profile for profile in campaign_profiles()}
             if profile_name not in profiles:
                 raise ValueError(f"unknown map_profile {profile_name!r}")
             self.profile = profiles[profile_name]
+            self.collision_test = bool(self.get_parameter("collision_test").value)
+            if self.collision_test and not hasattr(self.profile, "start_wall_x_m"):
+                raise ValueError("collision_test requires a corridor map profile")
+            self.episode_id = uuid.uuid4().hex
             self.tempdir = tempfile.TemporaryDirectory(prefix="laksa-wall-follow-")
             record = generate_corridor_map(self.profile, Path(self.tempdir.name) / profile_name)
+            initial_x_m = self.profile.start_wall_x_m - 0.25 if self.collision_test else 1.0
             self.env, self.observation = create_wall_environment(
                 Path(str(record["map_stub"])),
                 int(self.get_parameter("seed").value),
-                (1.0, self.profile.bottom_y_m + 0.254, 0.0),
+                (initial_x_m, self.profile.bottom_y_m + 0.254, 0.0),
             )
             self.authority = MockEpisodeAuthority()
             self.sim_time_s = 0.0
+            self.gym_steps = 0
+            self.rejected_terminal_requests = 0
             self.scan_pub = self.create_publisher(LaserScan, SCAN_TOPIC, 1)
             self.odom_pub = self.create_publisher(Odometry, ODOM_TOPIC, 1)
             self.applied_pub = self.create_publisher(AckermannDriveStamped, APPLIED_TOPIC, 1)
+            self.episode_status_pub = self.create_publisher(String, GYM_STATUS_TOPIC, 10)
             self.tf = TransformBroadcaster(self)
             self.create_subscription(AckermannDriveStamped, REQUEST_TOPIC, self.on_request, 1)
             self.create_timer(DT_S, self.step)
+            self.create_timer(0.05, self.publish_episode_status)
+            self.get_logger().info(
+                f"episode_started id={self.episode_id} profile={profile_name} "
+                f"seed={int(self.get_parameter('seed').value)} collision_test={self.collision_test} "
+                f"initial_x_m={initial_x_m:.3f}"
+            )
+            self.publish_episode_status()
 
         def on_request(self, message: AckermannDriveStamped) -> None:
+            if self.authority.terminal_reason is not None:
+                self.rejected_terminal_requests += 1
+                return
             self.authority.receive(
                 MotionRequest(
                     float(message.drive.speed),
@@ -168,6 +178,7 @@ def simulator_main() -> None:
             self.observation, _, done, truncated, _ = self.env.step(
                 np.asarray([[applied.steering_angle_rad, applied.speed_mps]], dtype=np.float32)
             )
+            self.gym_steps += 1
             self.sim_time_s += DT_S
             agent = self.observation["agent_0"]
             state = agent["std_state"]
@@ -188,7 +199,22 @@ def simulator_main() -> None:
                 stopped.header.stamp = stamp
                 stopped.header.frame_id = BASE_FRAME
                 self.applied_pub.publish(stopped)
-                self.get_logger().info(f"{reason}: simulator episode latched; restart launch to reset")
+                self.get_logger().info(
+                    f"{reason}: simulator episode latched id={self.episode_id} "
+                    f"gym_steps={self.gym_steps}; restart launch to reset"
+                )
+        def publish_episode_status(self) -> None:
+            status = String()
+            status.data = json.dumps(
+                {
+                    "episode_id": self.episode_id,
+                    "gym_steps": self.gym_steps,
+                    "terminal_reason": self.authority.terminal_reason,
+                    "rejected_terminal_requests": self.rejected_terminal_requests,
+                },
+                sort_keys=True,
+            )
+            self.episode_status_pub.publish(status)
 
         def publish_pose(self, stamp, x_m: float, y_m: float, yaw: float, speed: float) -> None:
             qz, qw = math.sin(yaw / 2.0), math.cos(yaw / 2.0)

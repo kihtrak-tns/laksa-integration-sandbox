@@ -59,6 +59,8 @@ setup(
             "wall_follow_gym_mock = laksa_speed_race.wall_follow_ros:simulator_main",
             "wall_follow_campaign = laksa_speed_race.wall_follow_sim:main",
             "wall_follow_replay = laksa_speed_race.wall_follow_replay:main",
+            "wall_follow_export_scan_bag = laksa_speed_race.wall_follow_bag_export:main",
+            "wall_follow_scan_preflight = laksa_speed_race.wall_follow_scan_preflight:main",
             "c1_historical_replay = laksa_speed_race.historical_replay:main",
         ],
     },

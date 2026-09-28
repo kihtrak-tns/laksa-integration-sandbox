@@ -3,7 +3,7 @@ from pathlib import Path
 import unittest
 
 from laksa_speed_race.wall_follow_core import ControllerConfig, FreshnessConfig
-from laksa_speed_race.wall_follow_ros import APPLIED_TOPIC, ODOM_TOPIC, REQUEST_TOPIC, SCAN_TOPIC
+from laksa_speed_race.wall_follow_ros import APPLIED_TOPIC, GYM_STATUS_TOPIC, ODOM_TOPIC, REQUEST_TOPIC, SCAN_TOPIC
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class InterfaceTests(unittest.TestCase):
     def test_every_runtime_topic_is_simulation_namespaced(self):
-        for topic in (SCAN_TOPIC, ODOM_TOPIC, REQUEST_TOPIC, APPLIED_TOPIC):
+        for topic in (SCAN_TOPIC, ODOM_TOPIC, REQUEST_TOPIC, APPLIED_TOPIC, GYM_STATUS_TOPIC):
             self.assertTrue(topic.startswith("/sim/laksa/"), topic)
         source = (ROOT / "laksa_speed_race" / "wall_follow_ros.py").read_text(encoding="utf-8")
         self.assertNotIn('"/laksa/command"', source)

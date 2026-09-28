@@ -1,0 +1,153 @@
+{
+  "classification": "synthetic_adapter_preflight_not_real_bag_replay",
+  "input_shape": {
+    "angle_increment_rad": 0.003490658503988659,
+    "angle_min_rad": -3.141592653589793,
+    "beams": 1800,
+    "frame_id": "laser",
+    "nominal_rate_hz": 12.8,
+    "range_max_m": 16.0,
+    "range_min_m": 0.05,
+    "sensor_pose": "unmeasured; simulation default x=0.31542 m, y=0, yaw=0",
+    "synthetic_inf_count": 258,
+    "topic_type": "sensor_msgs/msg/LaserScan"
+  },
+  "invalid_scan": {
+    "brake": true,
+    "diagnostic_reason": "too_many_invalid_ranges",
+    "request_reason": "too_many_invalid_ranges",
+    "speed_mps": 0.0,
+    "steering_angle_rad": 0.0
+  },
+  "limitations": [
+    "No A6 /scan payload was available in this execution session.",
+    "No measured laser-to-base transform was included in A6; sensor offset is the simulation default.",
+    "This preflight tests conversion, cadence, and controller bounds only; it does not validate car behavior."
+  ],
+  "real_a6_replay": "UNVERIFIED",
+  "schema": "laksa-wall-follow-laserscan-preflight-v1",
+  "stale_header": {
+    "age_s": 0.25,
+    "brake": true,
+    "diagnostic_reason": "stale_scan_header",
+    "request_reason": "stale_scan_header",
+    "speed_mps": 0.0,
+    "steering_angle_rad": 0.0
+  },
+  "valid_stream": {
+    "configured_speed_limit_mps": 0.38,
+    "configured_steering_bounds_rad": [
+      -0.288,
+      0.288
+    ],
+    "message_count": 12,
+    "moving_request_count": 9,
+    "observed_interval_rate_hz": 12.8,
+    "requests": [
+      {
+        "brake": true,
+        "diagnostic_reason": "recovery_gate",
+        "request_reason": "recovery_gate",
+        "speed_mps": 0.0,
+        "stamp_s": 100.0,
+        "steering_angle_rad": 0.0
+      },
+      {
+        "brake": true,
+        "diagnostic_reason": "recovery_gate",
+        "request_reason": "recovery_gate",
+        "speed_mps": 0.0,
+        "stamp_s": 100.078125,
+        "steering_angle_rad": 0.0
+      },
+      {
+        "brake": true,
+        "diagnostic_reason": "recovery_gate",
+        "request_reason": "recovery_gate",
+        "speed_mps": 0.0,
+        "stamp_s": 100.15625,
+        "steering_angle_rad": 0.0
+      },
+      {
+        "brake": false,
+        "diagnostic_reason": "tracking",
+        "request_reason": "tracking",
+        "speed_mps": 0.0625,
+        "stamp_s": 100.234375,
+        "steering_angle_rad": -3.398328840553691e-16
+      },
+      {
+        "brake": false,
+        "diagnostic_reason": "tracking",
+        "request_reason": "tracking",
+        "speed_mps": 0.125,
+        "stamp_s": 100.3125,
+        "steering_angle_rad": -3.0574194287424943e-16
+      },
+      {
+        "brake": false,
+        "diagnostic_reason": "tracking",
+        "request_reason": "tracking",
+        "speed_mps": 0.1875,
+        "stamp_s": 100.390625,
+        "steering_angle_rad": -2.816336155397894e-16
+      },
+      {
+        "brake": false,
+        "diagnostic_reason": "tracking",
+        "request_reason": "tracking",
+        "speed_mps": 0.25,
+        "stamp_s": 100.46875,
+        "steering_angle_rad": -2.6471277017492434e-16
+      },
+      {
+        "brake": false,
+        "diagnostic_reason": "tracking",
+        "request_reason": "tracking",
+        "speed_mps": 0.3125,
+        "stamp_s": 100.546875,
+        "steering_angle_rad": -2.5296691182816766e-16
+      },
+      {
+        "brake": false,
+        "diagnostic_reason": "tracking",
+        "request_reason": "tracking",
+        "speed_mps": 0.375,
+        "stamp_s": 100.625,
+        "steering_angle_rad": -2.4494704413444905e-16
+      },
+      {
+        "brake": false,
+        "diagnostic_reason": "tracking",
+        "request_reason": "tracking",
+        "speed_mps": 0.37999999999999984,
+        "stamp_s": 100.703125,
+        "steering_angle_rad": -2.3960988971091776e-16
+      },
+      {
+        "brake": false,
+        "diagnostic_reason": "tracking",
+        "request_reason": "tracking",
+        "speed_mps": 0.37999999999999984,
+        "stamp_s": 100.78125,
+        "steering_angle_rad": -2.3620428884192137e-16
+      },
+      {
+        "brake": false,
+        "diagnostic_reason": "tracking",
+        "request_reason": "tracking",
+        "speed_mps": 0.37999999999999984,
+        "stamp_s": 100.859375,
+        "steering_angle_rad": -2.3418940653219016e-16
+      }
+    ],
+    "speed_bounds_mps": [
+      0.0,
+      0.37999999999999984
+    ],
+    "steering_bounds_rad": [
+      -3.398328840553691e-16,
+      0.0
+    ]
+  }
+}
