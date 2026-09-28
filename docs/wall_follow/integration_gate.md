@@ -106,8 +106,10 @@ because the current session cannot access Docker. First run the standard
 
 ```bash
 sudo docker compose -f docker-compose.c1.yaml up --build -d wall-follow
-sudo docker compose -f docker-compose.c1.yaml exec -T wall-follow timeout 8 ros2 topic hz /sim/laksa/scan
-sudo docker compose -f docker-compose.c1.yaml exec -T wall-follow timeout 8 ros2 topic hz /sim/laksa/motion_request
+sudo docker compose -f docker-compose.c1.yaml exec -T wall-follow \
+  /usr/local/bin/c1_entrypoint.sh timeout 12 ros2 topic hz /sim/laksa/scan
+sudo docker compose -f docker-compose.c1.yaml exec -T wall-follow \
+  /usr/local/bin/c1_entrypoint.sh timeout 12 ros2 topic hz /sim/laksa/motion_request
 ```
 
 For a repeatable collision, run a separate launch with the simulation-only
@@ -121,15 +123,18 @@ counter.
 sudo docker compose -f docker-compose.c1.yaml run -d --no-deps \
   --name wall-follow-collision wall-follow \
   ros2 launch laksa_speed_race wall_follow_sim.launch.py collision_test:=true
-sudo docker exec wall-follow-collision timeout 1 ros2 topic echo --once /sim/laksa/gym_status > collision_before.yaml
-sudo docker exec wall-follow-collision ros2 topic pub --rate 20 --times 20 \
+sudo docker exec wall-follow-collision /usr/local/bin/c1_entrypoint.sh \
+  timeout 2 ros2 topic echo --once /sim/laksa/gym_status > collision_before.yaml
+sudo docker exec wall-follow-collision /usr/local/bin/c1_entrypoint.sh ros2 topic pub --rate 20 --times 20 \
   /sim/laksa/motion_request ackermann_msgs/msg/AckermannDriveStamped \
   "{drive: {speed: 0.38, steering_angle: 0.2}}"
-sudo docker exec wall-follow-collision timeout 1 ros2 topic echo --once /sim/laksa/gym_status > collision_after.yaml
+sudo docker exec wall-follow-collision /usr/local/bin/c1_entrypoint.sh \
+  timeout 2 ros2 topic echo --once /sim/laksa/gym_status > collision_after.yaml
 sudo docker compose -f docker-compose.c1.yaml run -d --no-deps \
   --name wall-follow-restart wall-follow \
   ros2 launch laksa_speed_race wall_follow_sim.launch.py collision_test:=false
-sudo docker exec wall-follow-restart timeout 1 ros2 topic echo --once /sim/laksa/gym_status > restart_status.yaml
+sudo docker exec wall-follow-restart /usr/local/bin/c1_entrypoint.sh \
+  timeout 2 ros2 topic echo --once /sim/laksa/gym_status > restart_status.yaml
 sudo docker logs wall-follow-collision > collision.log 2>&1
 sudo docker stop wall-follow-collision wall-follow-restart
 ```
