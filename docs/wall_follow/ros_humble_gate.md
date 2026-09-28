@@ -157,3 +157,72 @@ header produced the same bounded stop (`stale_scan_header`). The complete
 request series is in
 `results/wall_follow_10mm/laser_scan_adapter_preflight.json`. These are
 synthetic adapter results only; measured A6 replay remains **UNVERIFIED**.
+
+## Dell host build, live scan, and forced collision (operator transcript, 2026-09-28)
+
+These observations came from the operator's normal Dell terminal using
+`sudo docker`. The restricted Codex runner still cannot access the Dell
+Docker socket. The operator supplied terminal excerpts in conversation;
+the complete host-generated YAML/log files and image ID have not yet been
+added to this repository. Do not attribute the runtime image to a source SHA
+until its build checkout SHA and image ID are captured together.
+
+After the source-side OpenCV runtime-library fix in
+`b6f5bd0a799e594ea4a47b1ade4179e0586c7d22` (installing `libgl1` and
+`libglib2.0-0`), the operator's Docker Compose output reported the
+`laksa_speed_race-wall-follow` image **Built** (211.1 s) and the
+`wall-follow` container **Started** (13.9 s). A manual `python3 -c` probe
+reached `cv2` successfully, then raised `AttributeError` because the
+probe typed `cv2._version_` instead of `cv2.__version__`. That typo is not
+an OpenCV import failure. The launch log independently showed both ROS
+processes starting and the Gym mock announcing:
+
+```text
+episode_started id=9d78406528364079b0cd4cdf0c5045c6
+profile=continuous_wall_30in seed=101 collision_test=False initial_x_m=1.000
+```
+
+The operator then observed this episode's `/sim/laksa/gym_status` with
+`gym_steps=227059`, `rejected_terminal_requests=0`, and
+`terminal_reason=null`. The large step count measures time spent stepping,
+not traversal or lap completion. In that running container,
+`ros2 topic hz /sim/laksa/scan` produced these ten average-rate windows:
+
+```text
+19.969, 19.983, 19.979, 19.988, 19.991,
+19.991, 19.995, 19.987, 19.994, 19.995 Hz
+```
+
+Reported inter-message extremes across these windows were 0.043–0.055 s;
+the last output used a 207-message window. This verifies an approximately
+20 Hz ROS scan stream in the operator's rebuilt container. The earlier
+19.967–20.001 Hz motion-request observations belonged to an unidentified
+older image; the request rate has not yet been remeasured on this rebuilt
+image, and rate alone does not prove nonzero motion.
+
+The operator started a separate simulation-only container named
+`wall-follow-collision` with `collision_test:=true`. Its first supplied
+`/sim/laksa/gym_status` excerpt showed episode
+`546acfc1a992492b990639820f420b5b`, `gym_steps=1`, and
+`rejected_terminal_requests=93`; the displayed `terminal_reason` field
+was truncated after `gym_col...`. The container log supplies the complete
+terminal reason and placement:
+
+```text
+episode_started id=546acfc1a992492b990639820f420b5b
+profile=continuous_wall_30in seed=101 collision_test=True initial_x_m=0.150
+gym_collision: simulator episode latched
+id=546acfc1a992492b990639820f420b5b gym_steps=1; restart launch to reset
+```
+
+Thus a real ROS 2 Humble launch, scan stream, forced Gym collision, and
+post-terminal request rejection were observed in isolated Docker simulation.
+The already-positive rejection count can include the controller's own
+post-collision requests; it does not prove that deliberate nonzero probe
+requests were delivered or rejected. No before/after moving-probe snapshots,
+unchanged step count *after that probe*, or fresh episode after a restart
+have been supplied. The current ROS gate remains **PARTIAL / UNVERIFIED**
+until those outputs and source/image identity are captured. Real A6 scan
+replay remains **UNVERIFIED** pending the scan-only export, measured LiDAR
+transform, and recorded request trace. No physical car, device, or
+`/laksa/command` topic was involved.
