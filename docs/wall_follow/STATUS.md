@@ -5,29 +5,30 @@ human-observed evidence tied to installed firmware and autonomy SHAs.
 
 | Gate | State | Tested source / config / map | Date (UTC) | Evidence |
 |---|---|---|---|---|
-| ORIN CONTRACT REVIEW | PASS | `orin-bringup@c3a64a630166e1608a2e0e0699d5ac67be89ca6b`; sandbox base `21588774eef8023811e751019b13abc9a43b692e` | 2026-09-28 | [`orin_bringup_contract_review.md`](../integration/orin_bringup_contract_review.md) |
+| ORIN CONTRACT REVIEW | PASS (PHASE A EVIDENCE REVIEW) | `orin-bringup@2f1306072a4fe828412585b056ec8af1243e3056` | 2026-09-28 | A1a 97/97 ALL MATCH; A1b 6/6 with battery unplugged; A2 accepted stable 12.8 Hz / 1,800 beams; A3 boot services and A5 ZED pipeline recorded; A6 static and hand-carried bags recorded. Hand-carried motion is not a vehicle run. Remaining physical blockers are retained. [`Source-linked contract review`](../integration/orin_bringup_contract_review.md) |
 | UPDATED BASE INTEGRATION | PASS | merge `92ed803cdb9e331312139b888c6da4ebf195f25f`; base `f9676915ff71d3e7f22ed588e8054e5ce7cf9c72` | 2026-09-28 | The sole content conflict was `setup.py`; resolution preserves the base's `c1_historical_replay` and all wall-follow simulation entry points. Focused post-merge checks: 23/23 passed. [`Integration record`](base_integration_2026-09-28.md) |
 | SIM MODEL | PASS | source `290a2f3b22b3dc12443535fec7d2545e47ca5dcf`; config SHA-256 `b1fa0b84e1b36a947eae3f59dfb55651fc50a74684aa6534b4280e14698913e7`; Gym `bdaec1420c3b0f103858d289866d0d4e2e597c30` | 2026-09-28 | 75/75 nominal 20 Hz-control runs passed with zero collisions. Rendered 19/20/21-inch widths are distinct at 0.48/0.50/0.54 m. Minimum perimeter-sampled clearance estimate 0.0483 m. [`Current manifest`](../../firmware/esp32-s3/jetson/laksa_speed_race/results/wall_follow_10mm/run_manifest.json) |
 | WALL FOLLOWER | PASS (GYM ONLY) | same source/config; 100 Hz Gym, 20 Hz scan/request; 10 mm maps | 2026-09-28 | 19/19 focused tests passed. 60/60 corridors and 15/15 corners completed; all 85 manifest records passed collision, width, clearance, stop-reason, completion-class, and obstacle-timing audit. Race-lap completion remains `UNVERIFIED`. |
 | FAULT/STOP TESTS | PARTIAL | same source/config; independent 0.2 s request watchdog | 2026-09-28 | Gym: 10/10 passed. Both obstacle cases safely stopped without completion/collision; detection-to-stop request 2.00/2.35 s, stop-request-to-zero-applied 0.12 s, post-request distance 0.0156/0.0153 m. ROS terminal/collision/restart behavior remains `UNVERIFIED`. |
-| ROS 2 HUMBLE SIMULATION | UNVERIFIED | attempted source `ac67271b94e6844f2a420a1d901ec171f13099b9`; Compose `wall-follow` service | 2026-09-28 | Compose configuration resolved the service, but Docker daemon access was denied before image build or launch. No ROS rates, collision response, post-collision request behavior, or restart observation. [`ROS gate record`](ros_humble_gate.md) |
-| REAL SCAN REPLAY | PARTIAL / BLOCKED | synthetic analytic fixture passed; no committed real `/scan` bag at reviewed Orin head | 2026-09-28 | [`synthetic_replay.json`](../../firmware/esp32-s3/jetson/laksa_speed_race/results/wall_follow_10mm/synthetic_replay.json); real replay pending A2/A6 evidence |
+| ROS 2 HUMBLE SIMULATION | UNVERIFIED | Docker build attempt source `386c86869ed68cbc9c77b7e44454dfc3173b5881`; collision probe implementation `d325f12ed721e407d9e2a2b6f23607e3d8fc6585` | 2026-09-28 | Docker Engine client exists but the session cannot access `/var/run/docker.sock`; updated image build did not reach Docker. No ROS rates, Gym collision, rejected moving-request trace, or fresh-episode observation. [`ROS gate record`](ros_humble_gate.md) |
+| REAL SCAN REPLAY | UNVERIFIED | synthetic adapter preflight `d325f12ed721e407d9e2a2b6f23607e3d8fc6585`; Orin bags `20260928_033352_static` and `20260928_034706_handcarried` | 2026-09-28 | Added verbatim serialized `/scan` exporter and scan-only replay procedure. Five adapter/export tests pass; preflight bounds 12 synthetic scans at 12.8 Hz and verifies invalid/stale stops. A6 export and measured laser-to-base transform are unavailable, so no real replay is claimed. [`Replay path and preflight`](integration_gate.md#read-only-laserscan-export-and-replay) |
 | WHEELS-UP | BLOCKED | Physical work excluded by issue #2 | 2026-09-28 | Requires human-run installed-car gate |
 | LOW-SPEED CAR | BLOCKED | Physical work excluded by issue #2 | 2026-09-28 | Requires prior contract, stop, and wheels-up evidence |
 
-Current blockers: the Docker socket exposed to this execution session denies
-access, so the Humble image was not built or launched; the ROS gate remains
-`UNVERIFIED`. No committed Orin results, no real RPLIDAR bag/contract,
-unverified installed-firmware wire layout, speed/eRPM conversion, asymmetric
-steering limits, brake/timeout behavior, wired RJ45 stop, or final command
-publisher ownership. The Rules Guardian's historical Teensy authority also
-conflicts with the installed ESP32-S3/VESC path and must be resolved before
-promotion. Docker Engine is installed on the Dell, but its socket is
-inaccessible to this runner (`permission denied`); `sudo` is disabled by the
-runner's `no new privileges` setting. The Windows/WSL and LAN-host limitations
-from the earlier attempt are preserved in the gate record. The ROS launch,
-ROS-observed frequencies, and ROS terminal collision/reset behavior remain
-`UNVERIFIED`.
+Current blockers: Docker Engine is installed on the Dell, but the Docker
+socket exposed to this runner is denied even on the elevated command path, and
+`sudo` is disabled by `no new privileges`; the Humble image has not built and
+the ROS launch has not run. The ROS gate remains `UNVERIFIED`. The two A6 bags
+remain on the Orin; no scan-only export or measured laser-to-base transform
+was available in this session, so real replay is also `UNVERIFIED`. Phase A
+results now exist at the exact Orin SHA recorded above; they establish
+read-only interface/sensor observations, not physical drive, braking, or
+autonomy validation. Remaining blockers include micro-ROS session churn and
+silent stalls, speed/eRPM conversion, powered steering direction/endpoints,
+physical stop/brake/timeout behavior, wired RJ45 stop, a measured TF contract,
+and final single command publisher ownership. The Rules Guardian's historical
+Teensy authority also conflicts with the installed ESP32-S3/VESC path and must
+be resolved before promotion.
 
 Review fixes on this branch latch a terminal mock episode, render 10 mm maps,
 sample the body perimeter for clearance estimates, and separately time first
@@ -48,8 +49,9 @@ Earlier evidence remains preserved under `results/wall_follow` and
 `results/wall_follow_10mm`. None is a race lap or physical-car validation.
 
 Next action: provide this session access to the Dell Docker daemon or run the
-gate from an interactive host session, then reproduce the isolated ROS launch,
-measure scan/request rates, force collision, verify terminal latching, and
-restart into a fresh episode. Then have the hardware owner commit a real
-RPLIDAR bag and exact TF/driver configuration for read-only replay. Do not
+isolated gate in an interactive Docker-enabled session. Record observed scan
+and request rates, the deterministic `collision_test:=true` terminal case,
+rejected moving-request count with unchanged Gym steps, and a new episode ID
+after launch restart. Separately export only `/scan` from the A6 hand-carried
+bag and provide the measured LiDAR transform for read-only replay. Do not
 connect this controller to the car.
