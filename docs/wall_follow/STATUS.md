@@ -10,20 +10,24 @@ human-observed evidence tied to installed firmware and autonomy SHAs.
 | SIM MODEL | PASS | source `290a2f3b22b3dc12443535fec7d2545e47ca5dcf`; config SHA-256 `b1fa0b84e1b36a947eae3f59dfb55651fc50a74684aa6534b4280e14698913e7`; Gym `bdaec1420c3b0f103858d289866d0d4e2e597c30` | 2026-09-28 | 75/75 nominal 20 Hz-control runs passed with zero collisions. Rendered 19/20/21-inch widths are distinct at 0.48/0.50/0.54 m. Minimum perimeter-sampled clearance estimate 0.0483 m. [`Current manifest`](../../firmware/esp32-s3/jetson/laksa_speed_race/results/wall_follow_10mm/run_manifest.json) |
 | WALL FOLLOWER | PASS (GYM ONLY) | same source/config; 100 Hz Gym, 20 Hz scan/request; 10 mm maps | 2026-09-28 | 19/19 focused tests passed. 60/60 corridors and 15/15 corners completed; all 85 manifest records passed collision, width, clearance, stop-reason, completion-class, and obstacle-timing audit. Race-lap completion remains `UNVERIFIED`. |
 | FAULT/STOP TESTS | PARTIAL | same source/config; independent 0.2 s request watchdog | 2026-09-28 | Gym: 10/10 passed. Both obstacle cases safely stopped without completion/collision; detection-to-stop request 2.00/2.35 s, stop-request-to-zero-applied 0.12 s, post-request distance 0.0156/0.0153 m. ROS terminal/collision/restart behavior remains `UNVERIFIED`. |
+| ROS 2 HUMBLE SIMULATION | UNVERIFIED | attempted source `ac67271b94e6844f2a420a1d901ec171f13099b9`; Compose `wall-follow` service | 2026-09-28 | Compose configuration resolved the service, but Docker daemon access was denied before image build or launch. No ROS rates, collision response, post-collision request behavior, or restart observation. [`ROS gate record`](ros_humble_gate.md) |
 | REAL SCAN REPLAY | PARTIAL / BLOCKED | synthetic analytic fixture passed; no committed real `/scan` bag at reviewed Orin head | 2026-09-28 | [`synthetic_replay.json`](../../firmware/esp32-s3/jetson/laksa_speed_race/results/wall_follow_10mm/synthetic_replay.json); real replay pending A2/A6 evidence |
 | WHEELS-UP | BLOCKED | Physical work excluded by issue #2 | 2026-09-28 | Requires human-run installed-car gate |
 | LOW-SPEED CAR | BLOCKED | Physical work excluded by issue #2 | 2026-09-28 | Requires prior contract, stop, and wheels-up evidence |
 
-Current blockers: no committed Orin results, no real RPLIDAR bag/contract,
+Current blockers: the Docker socket exposed to this execution session denies
+access, so the Humble image was not built or launched; the ROS gate remains
+`UNVERIFIED`. No committed Orin results, no real RPLIDAR bag/contract,
 unverified installed-firmware wire layout, speed/eRPM conversion, asymmetric
 steering limits, brake/timeout behavior, wired RJ45 stop, or final command
 publisher ownership. The Rules Guardian's historical Teensy authority also
 conflicts with the installed ESP32-S3/VESC path and must be resolved before
-promotion. Docker and ROS 2 Humble were unavailable on both Windows and local
-Ubuntu-22.04 WSL. A discovered Ubuntu host at `192.168.1.236` did not accept an
-SSH connection before the bounded timeout, so its runtime could not be
-inspected or used. The ROS launch, ROS-observed frequencies, and ROS terminal
-collision/reset behavior remain `UNVERIFIED`.
+promotion. Docker Engine is installed on the Dell, but its socket is
+inaccessible to this runner (`permission denied`); `sudo` is disabled by the
+runner's `no new privileges` setting. The Windows/WSL and LAN-host limitations
+from the earlier attempt are preserved in the gate record. The ROS launch,
+ROS-observed frequencies, and ROS terminal collision/reset behavior remain
+`UNVERIFIED`.
 
 Review fixes on this branch latch a terminal mock episode, render 10 mm maps,
 sample the body perimeter for clearance estimates, and separately time first
@@ -43,7 +47,8 @@ Earlier evidence remains preserved under `results/wall_follow` and
 `results/wall_follow_20hz`. Current 10 mm acceptance evidence is under
 `results/wall_follow_10mm`. None is a race lap or physical-car validation.
 
-Next action: on a Docker/ROS 2 Humble host, reproduce the isolated ROS launch,
+Next action: provide this session access to the Dell Docker daemon or run the
+gate from an interactive host session, then reproduce the isolated ROS launch,
 measure scan/request rates, force collision, verify terminal latching, and
 restart into a fresh episode. Then have the hardware owner commit a real
 RPLIDAR bag and exact TF/driver configuration for read-only replay. Do not

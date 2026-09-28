@@ -42,3 +42,36 @@ the isolated launch, measure both topic rates, force a Gym collision, verify
 that later requests cannot move or step that terminal episode, terminate the
 launch, and verify that a fresh launch creates a fresh episode. No physical
 command topic or car device is part of this gate.
+
+## Dell Docker attempt (2026-09-28)
+
+The latest `codex/wall-follow-gym` source available for this attempt was
+`ac67271b94e6844f2a420a1d901ec171f13099b9`. The Compose file lists the
+`wall-follow` service and `docker compose ... config --services` succeeded.
+The Dell reports Docker Engine client version `29.8.1` (API `1.56`), but this
+execution session cannot access its daemon socket. `docker info` and the
+`wall-follow` image build both failed with:
+
+```text
+permission denied while trying to connect to the Docker API at unix:///var/run/docker.sock
+```
+
+The socket is presented as `nobody:nogroup` mode `srw-rw----`; the session is
+UID 1000 and has `nogroup`, but access is still denied by the runner. `sudo -v`
+cannot elevate inside this runner because `no new privileges` is set. The
+commands actually attempted were:
+
+```bash
+docker version
+docker info --format '{{.ServerVersion}}'
+docker compose -f firmware/esp32-s3/jetson/laksa_speed_race/docker-compose.c1.yaml config --services
+docker compose -f firmware/esp32-s3/jetson/laksa_speed_race/docker-compose.c1.yaml build wall-follow
+sudo -v
+```
+
+The Compose service was not built or launched. No ROS nodes ran, so there are
+no observed `/sim/laksa/scan` or `/sim/laksa/motion_request` rates, no forced
+collision result, no post-collision moving-request observation, and no launch
+restart/fresh-episode observation. These checks remain **UNVERIFIED**. No build
+fix was needed or attempted; the build did not reach Docker. No hardware or
+physical command topic was accessed.
