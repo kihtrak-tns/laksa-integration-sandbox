@@ -64,6 +64,10 @@ Corridor traversal, safe stop, and corner completion are reported separately.
 No closed-loop race lap is executed, so lap completion remains `UNVERIFIED`;
 these runs are not three-lap or speed-course validation.
 
+The current 20 Hz-control evidence is stored under `results/wall_follow_20hz`.
+The original 100 Hz-controller campaign remains unchanged under
+`results/wall_follow` for comparison.
+
 ## Known gaps
 
 - Neither Windows nor Ubuntu-22.04 WSL on the execution host exposed Docker or

@@ -55,6 +55,8 @@ Run the portable tests with:
 python -m unittest discover -s test -p 'test_wall_follow_*.py' -v
 ```
 
-Run the pinned-Gym campaign using the command in the integration note. Generated
-evidence is written to `results/wall_follow`; generated map images are omitted
-because the deterministic generator and SHA-256 values are committed.
+Run the pinned-Gym campaign using the command in the integration note. Current
+20 Hz-control evidence is written to `results/wall_follow_20hz`; the original
+100 Hz-controller evidence remains in `results/wall_follow` for comparison.
+Generated map images are omitted because the deterministic generator and
+SHA-256 values are committed.
