@@ -128,22 +128,31 @@ def _state(observation: dict[str, Any]) -> tuple[float, float, float, float, boo
     )
 
 
-def _minimum_body_clearance(
+def _minimum_perimeter_sampled_clearance(
     profile: CorridorMap | CornerMap,
     x_m: float,
     y_m: float,
     yaw_rad: float,
 ) -> float:
+    """Sample all rectangle edges; this is an estimate, not polygon clearance."""
     cosine, sine = math.cos(yaw_rad), math.sin(yaw_rad)
     center_x = x_m + 0.135 * cosine
     center_y = y_m + 0.135 * sine
-    clearances: list[float] = []
-    for longitudinal in (-0.284, 0.284):
-        for lateral in (-0.148, 0.148):
-            corner_x = center_x + longitudinal * cosine - lateral * sine
-            corner_y = center_y + longitudinal * sine + lateral * cosine
-            clearances.append(profile.point_clearance(corner_x, corner_y))
-    return min(clearances)
+    best = math.inf
+    for fixed, varying_extent, longitudinal_fixed in (
+        (-0.148, 0.284, False),
+        (0.148, 0.284, False),
+        (-0.284, 0.148, True),
+        (0.284, 0.148, True),
+    ):
+        divisions = math.ceil(2.0 * varying_extent / 0.02)
+        for index in range(divisions + 1):
+            varying = -varying_extent + 2.0 * varying_extent * index / divisions
+            longitudinal, lateral = (fixed, varying) if longitudinal_fixed else (varying, fixed)
+            px = center_x + longitudinal * cosine - lateral * sine
+            py = center_y + longitudinal * sine + lateral * cosine
+            best = min(best, profile.point_clearance(px, py))
+    return best
 
 
 def _start_pose(
@@ -214,6 +223,7 @@ def run_case(
     fault_start_s: float | None = None
     fault_start_distance: float | None = None
     request_stop_distance: float | None = None
+    first_stop_request_s: float | None = None
     first_stop_reason: str | None = None
     positive_request_seen = False
     last_request = MotionRequest(0.0, 0.0, True, "initial", 0.0, 0.0)
@@ -225,7 +235,7 @@ def run_case(
         for step in range(max_steps):
             now_s = step * DT_S
             x_m, y_m, yaw_rad, actual_speed_mps, collision, scan_ranges = _state(observation)
-            minimum_clearance = min(minimum_clearance, _minimum_body_clearance(profile, x_m, y_m, yaw_rad))
+            minimum_clearance = min(minimum_clearance, _minimum_perimeter_sampled_clearance(profile, x_m, y_m, yaw_rad))
             if collision:
                 collision_count += 1
                 failure_reason = "gym_collision"
@@ -282,14 +292,22 @@ def run_case(
                 )
                 last_request, diagnostics = controller.update(scan, now_s)
                 controller_update_count += 1
+                if (
+                    fault in {"obstacle_ahead", "opening_obstacle"}
+                    and fault_start_s is None
+                    and diagnostics.front_clearance_m is not None
+                    and diagnostics.front_clearance_m <= config.front_slow_clearance_m
+                ):
+                    # The static obstacle has existed since reset. This is
+                    # the first scan that puts it inside the slowdown zone.
+                    fault_start_s = now_s
+                    fault_start_distance = distance_travelled
                 if last_request.speed_mps > 1e-6:
                     positive_request_seen = True
                 if positive_request_seen and last_request.speed_mps <= 1e-6 and first_stop_reason is None:
                     first_stop_reason = last_request.reason
+                    first_stop_request_s = now_s
                     request_stop_distance = distance_travelled
-                    if fault in {"obstacle_ahead", "opening_obstacle"}:
-                        fault_start_s = now_s
-                        fault_start_distance = distance_travelled
                 if publish_request:
                     gate.receive(last_request, now_s)
                     request_publish_count += 1
@@ -358,11 +376,20 @@ def run_case(
     stop_distance = None
     if fault_start_distance is not None and applied_zero_row is not None:
         stop_distance = float(applied_zero_row["distance_travelled_m"]) - fault_start_distance
-    if completion and collision_count == 0 and failure_reason is None:
+    if fault is None and completion and collision_count == 0 and failure_reason is None:
         verdict = "PASS"
     elif fault == "restart" and collision_count == 0 and completion and applied_zero_s is not None:
         verdict = "PASS"
-    elif fault is not None and collision_count == 0 and positive_request_seen and applied_zero_s is not None:
+    elif (
+        fault in {"obstacle_ahead", "opening_obstacle"}
+        and collision_count == 0
+        and not completion
+        and fault_start_s is not None
+        and first_stop_reason in {"front_clearance_stop", "front_ttc_stop"}
+        and applied_zero_s is not None
+    ):
+        verdict = "PASS"
+    elif fault not in {None, "obstacle_ahead", "opening_obstacle"} and collision_count == 0 and positive_request_seen and applied_zero_s is not None:
         verdict = "PASS"
     else:
         verdict = "FAIL"
@@ -392,7 +419,8 @@ def run_case(
         "collision_count": collision_count,
         "progress_m": max((row["x_m"] - start_pose[0] for row in rows), default=0.0),
         "distance_travelled_m": distance_travelled,
-        "minimum_full_body_clearance_m": minimum_clearance,
+        "minimum_perimeter_sampled_clearance_m": minimum_clearance,
+        "perimeter_max_sample_gap_m": 0.02,
         "requested_speed_min_mps": min((row["requested_speed_mps"] for row in rows), default=0.0),
         "requested_speed_max_mps": max((row["requested_speed_mps"] for row in rows), default=0.0),
         "applied_speed_min_mps": min((row["applied_speed_mps"] for row in rows), default=0.0),
@@ -402,6 +430,15 @@ def run_case(
         "applied_steering_min_rad": min((row["applied_steering_rad"] for row in rows), default=0.0),
         "applied_steering_max_rad": max((row["applied_steering_rad"] for row in rows), default=0.0),
         "fault_start_s": fault_start_s,
+        "first_stop_request_s": first_stop_request_s,
+        "time_from_stop_request_to_zero_applied_s": (
+            None if first_stop_request_s is None or applied_zero_s is None
+            else max(0.0, applied_zero_s - first_stop_request_s)
+        ),
+        "distance_after_stop_request_m": (
+            None if request_stop_distance is None or applied_zero_row is None
+            else float(applied_zero_row["distance_travelled_m"]) - request_stop_distance
+        ),
         "time_to_zero_request_s": None if fault_start_s is None or request_zero_s is None else max(0.0, request_zero_s - fault_start_s),
         "time_to_zero_applied_s": None if fault_start_s is None or applied_zero_s is None else max(0.0, applied_zero_s - fault_start_s),
         "simulated_stop_distance_m": stop_distance,
@@ -542,7 +579,7 @@ def run_campaign(output_dir: Path, source_sha: str, config_path: Path) -> dict[s
     corners = [item for item in nominal if item["scenario_class"] == "corner_completion"]
     safe_stops = [item for item in summaries if item["scenario_class"] == "safe_stop"]
     manifest = {
-        "schema_version": "laksa-wall-follow-campaign-v1",
+        "schema_version": "laksa-wall-follow-campaign-v2",
         "run_at_utc": datetime.now(timezone.utc).isoformat(),
         "sandbox_source_sha": source_sha,
         "upstream": {

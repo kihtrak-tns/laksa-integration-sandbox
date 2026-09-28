@@ -24,9 +24,12 @@ steering limits of +/-0.288 rad. Only wheelbase/body dimensions have historical
 measurement support in the sandbox. Mass, inertia, friction, acceleration,
 servo response, braking, and symmetric steering are proxy assumptions.
 
-The full collision footprint, not the base-link point, is used for clearance
-metrics. Map truth and pose truth are used only for metrics and run termination;
-the controller receives only scan data.
+Gym's collision flag checks the simulated vehicle footprint. The separate
+clearance metric samples all four rectangle edges at intervals of at most
+20 mm; it is a perimeter estimate, not an exact polygon-to-occupancy distance.
+Earlier manifests used four corners and retain their historical values only.
+Map truth and pose truth are used only for metrics and run termination; the
+controller receives only scan data.
 
 ## Scan model
 
@@ -49,8 +52,11 @@ Generated maps cover a 30-inch corridor with a 0.8 m right-wall recess,
 continuous 19-, 20-, and 21-inch corridors, and a continuous-wall 90-degree
 left corner. Each nominal map runs five fixed seeds from three lateral/heading
 perturbations. A pass requires reaching that scenario's metric finish without
-Gym collision. The 19/20/21-inch cases cover the stated 20 +/- 1 inch
-uncertainty; they do not claim the real course geometry.
+Gym collision. The revised 10 mm occupancy resolution makes the rendered
+19/20/21-inch entries distinct; each manifest records the rasterized width.
+The earlier 20 mm maps rasterized 20 and 21 inches identically. The revised
+geometry still needs a full Gym campaign rerun and does not claim the real
+course shape.
 
 Fault cases inject controller crash, silent publisher, frozen and delayed
 scans, malformed scan, sensor dropout, command burst, restart, a forward
@@ -60,11 +66,22 @@ request freshness timer and continues stepping the simulator while it ramps
 speed to zero. Each trace records scan/request events, requested and applied
 speed/steering, stop timing, and simulated stop distance.
 
+In the ROS mock, a collision or terminal Gym state latches the episode and
+rejects further requests. Restart the isolated launch to reset both Gym and
+controller. The headless campaign creates fresh instances for each case. The
+ROS behavior remains unexecuted on Humble; only the pure-Python latch was
+tested. For static obstacles, the revised response clock starts at the first
+scan placing an object within front slowdown distance. Earlier traces began
+that clock at the explicit stop request and cannot establish perception
+response latency.
+
 Corridor traversal, safe stop, and corner completion are reported separately.
 No closed-loop race lap is executed, so lap completion remains `UNVERIFIED`;
 these runs are not three-lap or speed-course validation.
 
-The current 20 Hz-control evidence is stored under `results/wall_follow_20hz`.
+The prior 20 Hz-control evidence is stored under `results/wall_follow_20hz`.
+It predates the revised maps, clearance metric, and obstacle timing. A
+replacement Gym campaign is pending.
 The original 100 Hz-controller campaign remains unchanged under
 `results/wall_follow` for comparison.
 

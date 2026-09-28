@@ -21,6 +21,12 @@ The evidence runner uses the same 20 Hz scan/request boundary while Gym and
 the independent watchdog continue at 100 Hz. A missing scan therefore does not
 freeze simulated time or retain a nonzero request indefinitely.
 
+The ROS mock latches collision/done/truncated episodes, ignores subsequent
+requests, and stops stepping that Gym instance. Restart the isolated launch
+to begin a fresh episode with a fresh controller. The headless campaign
+creates a fresh Gym/controller instance for every case. The ROS terminal path
+still needs a Humble run, including a forced collision and restart.
+
 ## Reproduce
 
 From `firmware/esp32-s3/jetson/laksa_speed_race`, with the pinned Gym checkout
@@ -32,7 +38,7 @@ python -m laksa_speed_race.wall_follow_replay test/fixtures/synthetic_scan_bag_f
 python -m laksa_speed_race.wall_follow_sim \
   --config config/wall_follow_v1.json \
   --source-sha "$(git rev-parse HEAD)" \
-  --output-dir results/wall_follow_20hz
+  --output-dir results/wall_follow_10mm
 ```
 
 On a Docker/ROS 2 Humble host, the still-unverified ROS boundary can be run with:
@@ -46,6 +52,12 @@ Windows and neither executable nor `/opt/ros/humble/setup.bash` in the local
 Ubuntu-22.04 WSL instance. The launch command above was therefore not run and
 the ROS 2 Humble gate remains `UNVERIFIED`; no substitute runtime result is
 claimed.
+
+The latest source revision changes occupancy resolution, clearance sampling,
+and obstacle latency definitions. Previous results under
+`results/wall_follow_20hz` are historical. Do not mark the new campaign PASS
+until `results/wall_follow_10mm` is generated and inspected on a host with the
+pinned Gym checkout.
 
 ## Next human-run gate
 

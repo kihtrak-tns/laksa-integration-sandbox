@@ -3,6 +3,7 @@ import unittest
 
 from laksa_speed_race.wall_follow_core import (
     ControllerConfig,
+    MockEpisodeAuthority,
     MotionRequest,
     RequestFreshnessGate,
     ScanFrame,
@@ -128,6 +129,22 @@ class WallFollowerTests(unittest.TestCase):
         self.assertGreater(max(speeds), 0.0)
         self.assertEqual(speeds[-1], 0.0)
         self.assertEqual(gate.reason, "request_watchdog_timeout")
+
+    def test_terminal_episode_rejects_new_motion_until_explicit_reset(self):
+        authority = MockEpisodeAuthority()
+        moving = MotionRequest(0.4, 0.1, False, "tracking", 0.0, 0.0)
+        authority.receive(moving, 0.0)
+        self.assertGreater(authority.apply(0.05, 0.05).speed_mps, 0.0)
+        authority.terminate("gym_collision")
+        for now_s in (0.06, 0.11, 0.25):
+            authority.receive(moving, now_s)
+            stopped = authority.apply(now_s, 0.05)
+            self.assertEqual(stopped.speed_mps, 0.0)
+            self.assertTrue(stopped.brake)
+            self.assertEqual(stopped.reason, "gym_collision")
+        authority.reset()  # A real reset also requires a new Gym/controller episode.
+        authority.receive(moving, 0.30)
+        self.assertGreater(authority.apply(0.35, 0.05).speed_mps, 0.0)
 
 
 if __name__ == "__main__":

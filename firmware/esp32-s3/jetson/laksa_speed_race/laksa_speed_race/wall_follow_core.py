@@ -439,3 +439,31 @@ class RequestFreshnessGate:
             self._latest.header_stamp_s if self._latest is not None else now_s,
             now_s,
         )
+
+
+class MockEpisodeAuthority:
+    """Latch a finished Gym episode until its owner explicitly resets it."""
+
+    def __init__(self, config: FreshnessConfig | None = None):
+        self._config = config
+        self.gate = RequestFreshnessGate(config)
+        self.terminal_reason: str | None = None
+
+    def receive(self, request: MotionRequest, now_s: float) -> None:
+        if self.terminal_reason is None:
+            self.gate.receive(request, now_s)
+
+    def apply(self, now_s: float, dt_s: float) -> MotionRequest:
+        if self.terminal_reason is not None:
+            return MotionRequest(0.0, 0.0, True, self.terminal_reason, now_s, now_s)
+        return self.gate.apply(now_s, dt_s)
+
+    def terminate(self, reason: str) -> None:
+        if self.terminal_reason is None:
+            self.terminal_reason = reason
+            self.gate = RequestFreshnessGate(self._config)
+
+    def reset(self) -> None:
+        """Call only together with a new Gym episode and controller reset."""
+        self.gate = RequestFreshnessGate(self._config)
+        self.terminal_reason = None

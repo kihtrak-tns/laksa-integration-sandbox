@@ -14,7 +14,7 @@ class CorridorMap:
     name: str
     width_m: float
     length_m: float = 8.0
-    resolution_m: float = 0.02
+    resolution_m: float = 0.01
     world_width_m: float = 9.0
     world_height_m: float = 4.0
     center_y_m: float = 2.0
@@ -79,7 +79,7 @@ class CornerMap:
 
     name: str = "continuous_wall_left_corner_30in"
     width_m: float = 30.0 * 0.0254
-    resolution_m: float = 0.02
+    resolution_m: float = 0.01
     world_width_m: float = 7.0
     world_height_m: float = 7.0
     entry_start_x_m: float = 0.40
@@ -161,6 +161,11 @@ def generate_corridor_map(profile: CorridorMap | CornerMap, output_dir: Path) ->
             x_m = (px + 0.5) * profile.resolution_m
             rows[py][px] = 255 if profile.is_free(x_m, y_m) else 0
 
+    # Record the rasterized width. Requested inch values alone do not prove
+    # that the occupancy images encode distinct corridor geometries.
+    entry_column = round(1.5 / profile.resolution_m)
+    rendered_entry_width_m = sum(row[entry_column] == 255 for row in rows) * profile.resolution_m
+
     image_path = output_dir / f"{profile.name}.pgm"
     pgm_lines = ["P2", f"{width_px} {height_px}", "255"]
     # Map loaders flip the image vertically; write world-high rows first.
@@ -191,6 +196,7 @@ def generate_corridor_map(profile: CorridorMap | CornerMap, output_dir: Path) ->
     return {
         "name": profile.name,
         "profile": asdict(profile),
+        "rendered_entry_width_m": rendered_entry_width_m,
         "map_stub": str(output_dir / profile.name),
         "files": {
             path.name: _sha256(path)

@@ -11,7 +11,7 @@ import math
 from pathlib import Path
 import tempfile
 
-from .wall_follow_core import MotionRequest, RequestFreshnessGate, ScanFrame, WallFollowController
+from .wall_follow_core import MockEpisodeAuthority, MotionRequest, ScanFrame, WallFollowController
 from .wall_follow_maps import campaign_profiles, generate_corridor_map
 from .wall_follow_sim import DT_S, SCAN_INTERVAL_STEPS, create_wall_environment
 
@@ -137,7 +137,7 @@ def simulator_main() -> None:
                 int(self.get_parameter("seed").value),
                 (1.0, self.profile.bottom_y_m + 0.254, 0.0),
             )
-            self.gate = RequestFreshnessGate()
+            self.authority = MockEpisodeAuthority()
             self.sim_time_s = 0.0
             self.scan_pub = self.create_publisher(LaserScan, SCAN_TOPIC, 1)
             self.odom_pub = self.create_publisher(Odometry, ODOM_TOPIC, 1)
@@ -147,7 +147,7 @@ def simulator_main() -> None:
             self.create_timer(DT_S, self.step)
 
         def on_request(self, message: AckermannDriveStamped) -> None:
-            self.gate.receive(
+            self.authority.receive(
                 MotionRequest(
                     float(message.drive.speed),
                     float(message.drive.steering_angle),
@@ -160,7 +160,11 @@ def simulator_main() -> None:
             )
 
         def step(self) -> None:
-            applied = self.gate.apply(self.sim_time_s, DT_S)
+            # A collided/finished Gym instance is terminal. Restart the launch
+            # (or explicitly reset both Gym and the controller) for a new run.
+            if self.authority.terminal_reason is not None:
+                return
+            applied = self.authority.apply(self.sim_time_s, DT_S)
             self.observation, _, done, truncated, _ = self.env.step(
                 np.asarray([[applied.steering_angle_rad, applied.speed_mps]], dtype=np.float32)
             )
@@ -178,7 +182,13 @@ def simulator_main() -> None:
             if round(self.sim_time_s / DT_S) % SCAN_INTERVAL_STEPS == 0:
                 self.publish_scan(stamp, agent["scan"])
             if bool(agent["collision"]) or done or truncated:
-                self.gate = RequestFreshnessGate()
+                reason = "gym_collision" if bool(agent["collision"]) else "gym_episode_terminal"
+                self.authority.terminate(reason)
+                stopped = AckermannDriveStamped()
+                stopped.header.stamp = stamp
+                stopped.header.frame_id = BASE_FRAME
+                self.applied_pub.publish(stopped)
+                self.get_logger().info(f"{reason}: simulator episode latched; restart launch to reset")
 
         def publish_pose(self, stamp, x_m: float, y_m: float, yaw: float, speed: float) -> None:
             qz, qw = math.sin(yaw / 2.0), math.cos(yaw / 2.0)
