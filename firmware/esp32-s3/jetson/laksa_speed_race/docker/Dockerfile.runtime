@@ -2,7 +2,7 @@ FROM ros:humble-ros-base-jammy
 
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      build-essential git libeigen3-dev patch python3-pip \
+      build-essential git libeigen3-dev libgl1 libglib2.0-0 patch python3-pip \
       python3-colcon-common-extensions \
       ros-humble-ackermann-msgs ros-humble-eigen3-cmake-module \
       ros-humble-nav-msgs ros-humble-sensor-msgs ros-humble-tf2-ros ros-humble-visualization-msgs && \
