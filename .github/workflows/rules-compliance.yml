@@ -1,0 +1,31 @@
+name: Rules compliance foundation
+
+on:
+  push:
+    branches: [main, "codex/**", "claude/**", "feature/**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-rules-guardian:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate compliance artifacts
+        run: python scripts/validate_rules_guardian.py --repo-root .
+
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Check whitespace errors
+        run: git diff --check HEAD~1 HEAD || git diff --check

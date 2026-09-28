@@ -1,0 +1,422 @@
+{
+  "schema_version": 1,
+  "source": {
+    "revision": "4.2",
+    "revision_date": "2026-07-08",
+    "sha256": "9c99a80df3777ad33750955dd4d5d1cc3c4deadc8ea8aa0f389aa520421c754b"
+  },
+  "review_outcomes": [
+    "COMPLIANT",
+    "NON-COMPLIANT",
+    "NEEDS ORGANIZER CLARIFICATION",
+    "NOT APPLICABLE"
+  ],
+  "verification_states": [
+    "ALIGNED",
+    "OPEN_DESIGN",
+    "OPEN_EVIDENCE",
+    "CLARIFY",
+    "CONFLICT",
+    "PROCESS",
+    "OPTIONAL"
+  ],
+  "rules": [
+    {
+      "id": "0.1.1",
+      "category": "ip",
+      "statement": "Do not use Caterpillar proprietary IP on the vehicle.",
+      "severity": "blocking",
+      "verification": "OPEN_EVIDENCE",
+      "applies_to": ["source", "data", "dependencies", "documentation"],
+      "evidence": ["signed source/data/dependency audit"]
+    },
+    {
+      "id": "0.1.2",
+      "category": "repository",
+      "statement": "Use an external public code repository rather than internal GitHub Enterprise or gitgis.",
+      "severity": "blocking",
+      "verification": "ALIGNED",
+      "applies_to": ["repository", "release"],
+      "evidence": ["public official repository URL", "competition release commit/tag"]
+    },
+    {
+      "id": "0.1.3-0.1.5",
+      "category": "ip",
+      "statement": "Follow organizer/IP processes for possible Caterpillar use or genuinely novel content.",
+      "severity": "advisory",
+      "verification": "PROCESS",
+      "applies_to": ["architecture", "algorithms", "documentation"],
+      "evidence": ["IP review record when applicable"]
+    },
+    {
+      "id": "0.2.1",
+      "category": "team",
+      "statement": "Maintain at least two Cat Technology or Cat Digital employees on the team.",
+      "severity": "blocking",
+      "verification": "PROCESS",
+      "applies_to": ["team"],
+      "evidence": ["eligible roster"]
+    },
+    {
+      "id": "0.2.2-0.2.3",
+      "category": "funding",
+      "statement": "Meet design-review and parts-list obligations when Caterpillar funding is used.",
+      "severity": "blocking",
+      "verification": "PROCESS",
+      "applies_to": ["budget", "procurement"],
+      "evidence": ["design-review record", "submitted parts list"]
+    },
+    {
+      "id": "0.2.4-0.2.4.1",
+      "category": "milestone",
+      "statement": "By August 14, 2026 demonstrate forward motion, a controlled 90-degree turn, and forward motion afterward.",
+      "severity": "blocking",
+      "verification": "OPEN_DESIGN",
+      "applies_to": ["autonomy", "control", "demo"],
+      "evidence": ["video", "time-synchronized command/state/fault logs"]
+    },
+    {
+      "id": "0.2.5-0.2.5.3",
+      "category": "safety_review",
+      "statement": "Complete the mandatory safety review including stop assertion, clearing, and heartbeat timeout with in-person representatives.",
+      "severity": "blocking",
+      "verification": "CLARIFY",
+      "applies_to": ["safety", "schedule", "watchdog"],
+      "evidence": ["safety-review signoff", "fault-injection logs"],
+      "clarifications": ["CLAR-001", "CLAR-002"]
+    },
+    {
+      "id": "0.3.1-0.3.2",
+      "category": "dimensions",
+      "statement": "Use US customary dimensions as controlling and account for nominal course variation of plus or minus one inch unless specified otherwise.",
+      "severity": "blocking",
+      "verification": "ALIGNED",
+      "applies_to": ["mechanical", "planning"],
+      "evidence": ["margin analysis"]
+    },
+    {
+      "id": "1.1-1.1.2",
+      "category": "safety",
+      "statement": "The robot must not endanger people or robots and may be stopped/reinspected by staff.",
+      "severity": "blocking",
+      "verification": "OPEN_EVIDENCE",
+      "applies_to": ["all"],
+      "evidence": ["hazard analysis", "inspection checklist", "guards and restraints evidence"]
+    },
+    {
+      "id": "1.2-1.2.2.4",
+      "category": "estop",
+      "statement": "Provide the mandatory RJ45 course stop interface: pins 1-4 common, pins 5-8 common, connected for RUN and isolated for STOP.",
+      "severity": "blocking",
+      "verification": "OPEN_DESIGN",
+      "applies_to": ["electrical", "teensy", "safety"],
+      "evidence": ["schematic", "pinout", "continuity/isolation tests", "disconnect/open-wire tests"],
+      "clarifications": ["CLAR-009"]
+    },
+    {
+      "id": "1.2.3",
+      "category": "estop",
+      "statement": "A team-provided auxiliary E-stop is optional and does not replace the course interface.",
+      "severity": "advisory",
+      "verification": "OPTIONAL",
+      "applies_to": ["wireless_estop"],
+      "evidence": ["scope decision"]
+    },
+    {
+      "id": "1.2.4-1.2.7.2",
+      "category": "auxiliary_estop",
+      "statement": "If used, the auxiliary E-stop must be wireless, noninterfering, fail safe, and stop within one second on loss or request; 300 ft is recommended.",
+      "severity": "blocking",
+      "verification": "OPTIONAL",
+      "applies_to": ["wireless_estop"],
+      "evidence": ["range test", "interference test", "loss-of-link test", "stop-latency test"]
+    },
+    {
+      "id": "1.2.8",
+      "category": "operations",
+      "statement": "Event staff and team members may operate E-stop activation devices around the course.",
+      "severity": "advisory",
+      "verification": "PROCESS",
+      "applies_to": ["runbook"],
+      "evidence": ["operator assignment and training"]
+    },
+    {
+      "id": "1.2.9",
+      "category": "estop",
+      "statement": "E-stop must cease propulsion; Ackermann steering may continue only to prevent collision until fully stopped.",
+      "severity": "blocking",
+      "verification": "OPEN_DESIGN",
+      "applies_to": ["teensy", "actuation", "control"],
+      "evidence": ["stop-latency and distance logs", "bounded-steering test"]
+    },
+    {
+      "id": "1.2.10",
+      "category": "estop",
+      "statement": "Automatic resume after E-stop clear is permitted when the design supports safe resumption.",
+      "severity": "blocking",
+      "verification": "OPEN_DESIGN",
+      "applies_to": ["state_machine", "mission"],
+      "evidence": ["guarded-resume requirements and tests"],
+      "clarifications": ["CLAR-006"]
+    },
+    {
+      "id": "1.3",
+      "category": "operations",
+      "statement": "Humans may enter only after all robots are E-stopped and completely stopped.",
+      "severity": "blocking",
+      "verification": "PROCESS",
+      "applies_to": ["runbook"],
+      "evidence": ["intervention procedure and rehearsal"]
+    },
+    {
+      "id": "2.1.1-2.1.3",
+      "category": "budget",
+      "statement": "Caterpillar funding is capped at $1,000; the provided perception sensor is excluded; personal funds beyond the cap are allowed.",
+      "severity": "blocking",
+      "verification": "OPEN_EVIDENCE",
+      "applies_to": ["bom", "procurement"],
+      "evidence": ["component ledger with payer/source"],
+      "clarifications": ["CLAR-008"]
+    },
+    {
+      "id": "2.2.1",
+      "category": "dimensions",
+      "statement": "The robot may never exceed 16 inches wide, 24 inches long, or 16 inches high.",
+      "severity": "blocking",
+      "verification": "OPEN_EVIDENCE",
+      "applies_to": ["mechanical", "sensors", "mounts"],
+      "evidence": ["signed measurements and photos in complete race configuration"],
+      "clarifications": ["CLAR-010"]
+    },
+    {
+      "id": "2.2.2",
+      "category": "weight",
+      "statement": "The robot may not exceed 25 pounds.",
+      "severity": "blocking",
+      "verification": "OPEN_EVIDENCE",
+      "applies_to": ["mechanical", "bom"],
+      "evidence": ["race-ready weight record"]
+    },
+    {
+      "id": "2.3",
+      "category": "electrical",
+      "statement": "Onboard electrical systems must never exceed 50 volts.",
+      "severity": "blocking",
+      "verification": "ALIGNED",
+      "applies_to": ["battery", "power_distribution"],
+      "evidence": ["maximum charged voltage and rail record", "protection schematic"]
+    },
+    {
+      "id": "2.4-2.4.1",
+      "category": "communications",
+      "statement": "While competing, operate autonomously without off-track remote-control-like communications; E-stop and RTK GNSS are exempt.",
+      "severity": "blocking",
+      "verification": "CONFLICT",
+      "applies_to": ["rc", "xbox", "wifi", "bluetooth", "dashboard", "telemetry"],
+      "evidence": ["competition-mode rejection test", "radio/configuration record"],
+      "clarifications": ["CLAR-003"]
+    },
+    {
+      "id": "2.5",
+      "category": "autonomy",
+      "statement": "The robot must start and stop autonomously.",
+      "severity": "blocking",
+      "verification": "OPEN_DESIGN",
+      "applies_to": ["mission", "state_machine"],
+      "evidence": ["end-to-end start/stop tests"]
+    },
+    {
+      "id": "2.5.1",
+      "category": "visual_start",
+      "statement": "The robot must start based on a visual signal on the course.",
+      "severity": "blocking",
+      "verification": "CLARIFY",
+      "applies_to": ["zed", "perception", "mission"],
+      "evidence": ["representative validation set", "false-start and stale-input tests"],
+      "clarifications": ["CLAR-004"]
+    },
+    {
+      "id": "2.5.2",
+      "category": "lap_stop",
+      "statement": "The robot must stop after the specified number of laps.",
+      "severity": "blocking",
+      "verification": "OPEN_DESIGN",
+      "applies_to": ["localization", "mission", "control"],
+      "evidence": ["three-speed-lap tests", "two-obstacle-lap tests", "duplicate-crossing rejection"]
+    },
+    {
+      "id": "2.6-2.6.10",
+      "category": "flag",
+      "statement": "Carry the issued flag with its top 24-26 inches above ground and mount point no higher than 8 inches; only the flag/wire is exempt from envelope and weight.",
+      "severity": "blocking",
+      "verification": "OPEN_DESIGN",
+      "applies_to": ["mechanical"],
+      "evidence": ["mount design", "height and exemption measurements"],
+      "clarifications": ["CLAR-010"]
+    },
+    {
+      "id": "2.7",
+      "category": "battery",
+      "statement": "Carry sufficient batteries for at least three consecutive heats where event charging may be limited.",
+      "severity": "blocking",
+      "verification": "OPEN_EVIDENCE",
+      "applies_to": ["battery", "power", "operations"],
+      "evidence": ["three-heat runtime/energy test and battery plan"]
+    },
+    {
+      "id": "3.1-3.3",
+      "category": "course",
+      "statement": "Support separate speed and obstacle courses using provided layouts/intersection instructions and a minimum 20-inch track width.",
+      "severity": "blocking",
+      "verification": "OPEN_EVIDENCE",
+      "applies_to": ["planning", "mechanical"],
+      "evidence": ["current course layouts", "turning-envelope and clearance analysis"],
+      "clarifications": ["CLAR-011"]
+    },
+    {
+      "id": "3.4",
+      "category": "visual_start",
+      "statement": "Both courses include a vision-based starting indicator.",
+      "severity": "blocking",
+      "verification": "CLARIFY",
+      "applies_to": ["zed", "perception"],
+      "evidence": ["final-indicator validation"],
+      "clarifications": ["CLAR-004"]
+    },
+    {
+      "id": "3.4.1",
+      "category": "manual_start",
+      "statement": "An alternative manual trigger is allowed with a five-second penalty as an exception to Rules 2.4 and 2.5.",
+      "severity": "blocking",
+      "verification": "CLARIFY",
+      "applies_to": ["fallback_start"],
+      "evidence": ["approved method and test"],
+      "clarifications": ["CLAR-005"]
+    },
+    {
+      "id": "3.5-3.5.4",
+      "category": "intervention",
+      "statement": "Use the timekeeper, E-stop operator, and race-director process before entering or moving the robot.",
+      "severity": "blocking",
+      "verification": "PROCESS",
+      "applies_to": ["runbook"],
+      "evidence": ["intervention roles and rehearsal"]
+    },
+    {
+      "id": "3.5.5-3.5.5.2",
+      "category": "resume",
+      "statement": "After the course clears and E-stop is released, resume without remote control or accept the manual-start penalty.",
+      "severity": "blocking",
+      "verification": "OPEN_DESIGN",
+      "applies_to": ["mission", "teensy", "state_machine"],
+      "evidence": ["mission-state preservation and guarded-resume test"],
+      "clarifications": ["CLAR-006"]
+    },
+    {
+      "id": "3.5.6-3.5.6.1",
+      "category": "intervention",
+      "statement": "A team may end early; removal during intervention requires a new run.",
+      "severity": "advisory",
+      "verification": "PROCESS",
+      "applies_to": ["runbook", "mission_reset"],
+      "evidence": ["early-end and reset procedure"]
+    },
+    {
+      "id": "3.6.1-3.6.2",
+      "category": "speed_course",
+      "statement": "Complete three consecutive timed laps and never replace the robot ahead of prior forward progress after intervention.",
+      "severity": "blocking",
+      "verification": "OPEN_DESIGN",
+      "applies_to": ["lap_count", "recovery", "runbook"],
+      "evidence": ["three-lap test", "replacement procedure"]
+    },
+    {
+      "id": "3.7.1-3.7.3.3",
+      "category": "obstacle_course",
+      "statement": "Complete two laps and apply the specified intervention, bypass, retry, and escalating skip-penalty rules.",
+      "severity": "blocking",
+      "verification": "OPEN_DESIGN",
+      "applies_to": ["lap_count", "obstacle_strategy", "runbook"],
+      "evidence": ["two-lap test", "obstacle completion and skip accounting"],
+      "clarifications": ["CLAR-012"]
+    },
+    {
+      "id": "3.8-3.8.7",
+      "category": "fiducials",
+      "statement": "If used, team fiducials must satisfy footprint, height, placement, attachment, setup, and removal limits.",
+      "severity": "blocking",
+      "verification": "OPTIONAL",
+      "applies_to": ["fiducials", "operations"],
+      "evidence": ["placement plan", "dimensions", "damage-free attachment and removal test"]
+    },
+    {
+      "id": "4.1-4.1.3",
+      "category": "heats",
+      "statement": "Plan for one practice heat and two to four scored heats per course, with best time retained.",
+      "severity": "advisory",
+      "verification": "PROCESS",
+      "applies_to": ["operations", "calibration"],
+      "evidence": ["practice checklist and configuration-freeze procedure"],
+      "clarifications": ["CLAR-007"]
+    },
+    {
+      "id": "4.2-4.2.4",
+      "category": "heats",
+      "statement": "Each heat lasts ten minutes, can contain multiple runs, and ends with E-stop assertion.",
+      "severity": "blocking",
+      "verification": "OPEN_EVIDENCE",
+      "applies_to": ["thermal", "battery", "logging", "mission"],
+      "evidence": ["ten-minute load test", "repeated-run and heat-end tests"]
+    },
+    {
+      "id": "4.3-4.3.3",
+      "category": "estop_operator",
+      "statement": "Designate an attentive E-stop operator who immediately stops when directed or when danger occurs.",
+      "severity": "blocking",
+      "verification": "PROCESS",
+      "applies_to": ["team", "runbook"],
+      "evidence": ["primary/backup assignment and rehearsal"]
+    },
+    {
+      "id": "4.4",
+      "category": "retrieval",
+      "statement": "Keep the vehicle on track until motion ceases and the race director declares access safe.",
+      "severity": "blocking",
+      "verification": "PROCESS",
+      "applies_to": ["runbook"],
+      "evidence": ["retrieval procedure"]
+    },
+    {
+      "id": "5.1-5.1.2",
+      "category": "questions",
+      "statement": "Use Cat Robotics Stack Overflow with the DIY-Robot-Challenge tag for organizer questions.",
+      "severity": "advisory",
+      "verification": "PROCESS",
+      "applies_to": ["clarifications"],
+      "evidence": ["dated question and response links"]
+    },
+    {
+      "id": "5.2-5.2.1",
+      "category": "authority",
+      "statement": "Treat SharePoint as the official archive because external copies may be stale.",
+      "severity": "blocking",
+      "verification": "PROCESS",
+      "applies_to": ["release", "rules_update"],
+      "evidence": ["pre-gate revision/checksum verification"]
+    }
+  ],
+  "clarifications": [
+    {"id": "CLAR-001", "priority": "P0", "status": "OPEN"},
+    {"id": "CLAR-002", "priority": "P0", "status": "OPEN"},
+    {"id": "CLAR-003", "priority": "P0", "status": "OPEN"},
+    {"id": "CLAR-004", "priority": "P0", "status": "OPEN"},
+    {"id": "CLAR-005", "priority": "P1", "status": "OPEN"},
+    {"id": "CLAR-006", "priority": "P1", "status": "OPEN"},
+    {"id": "CLAR-007", "priority": "P1", "status": "OPEN"},
+    {"id": "CLAR-008", "priority": "P1", "status": "OPEN"},
+    {"id": "CLAR-009", "priority": "P1", "status": "OPEN"},
+    {"id": "CLAR-010", "priority": "P1", "status": "OPEN"},
+    {"id": "CLAR-011", "priority": "P2", "status": "OPEN"},
+    {"id": "CLAR-012", "priority": "P2", "status": "OPEN"}
+  ]
+}

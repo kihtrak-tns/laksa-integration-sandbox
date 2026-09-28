@@ -1,0 +1,24 @@
+{
+  "competition": "Culture Club Robotics Competition 2026",
+  "governing_document": "DIY Robot Challenge Rules 2026.docx",
+  "revision": "4.2",
+  "revision_date": "2026-07-08",
+  "sha256": "9c99a80df3777ad33750955dd4d5d1cc3c4deadc8ea8aa0f389aa520421c754b",
+  "audit_date": "2026-08-06",
+  "authority_note": "The original organizer document and subsequent written organizer clarifications are authoritative. Derived repository files do not replace them.",
+  "redistribution": "unconfirmed",
+  "repository_policy": "Do not commit the original organizer document or visual-signal artwork until redistribution and information-classification permission are confirmed.",
+  "known_conflicts": [
+    {
+      "id": "CLAR-001",
+      "summary": "The introductory timeline says September 23, 2026 for the safety review; Rule 0.2.5 says September 25, 2026."
+    }
+  ],
+  "provisional_inputs": [
+    {
+      "name": "Visual start/stop drawing",
+      "status": "Prior-year example; final 2026 background and operating specification pending",
+      "derived_notes": "docs/compliance/visual_start_signal_notes.md"
+    }
+  ]
+}
