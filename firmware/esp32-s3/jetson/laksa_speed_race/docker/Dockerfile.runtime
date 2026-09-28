@@ -10,10 +10,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY docker/requirements-runtime.lock /tmp/requirements.lock
 RUN python3 -m pip install --no-cache-dir -r /tmp/requirements.lock
+# The pinned Gym source uses uv_build. Keep its executable on PATH when pip
+# invokes the backend instead of relying on pip's temporary build environment.
+RUN python3 -m pip install --no-cache-dir 'uv_build==0.9.30' && command -v uv-build
 
 RUN git clone https://github.com/f1tenth/f1tenth_gym.git /opt/upstream/f1tenth_gym && \
     git -C /opt/upstream/f1tenth_gym checkout --detach bdaec1420c3b0f103858d289866d0d4e2e597c30 && \
-    python3 -m pip install --no-cache-dir --no-deps /opt/upstream/f1tenth_gym && \
+    python3 -m pip install --no-cache-dir --no-deps --no-build-isolation /opt/upstream/f1tenth_gym && \
     git clone https://github.com/CL2-UWaterloo/f1tenth_ws.git /opt/upstream/waterloo_f1tenth_ws && \
     git -C /opt/upstream/waterloo_f1tenth_ws checkout --detach c20cf63d04b9841ffdb6b2f963bd737d78074136
 
