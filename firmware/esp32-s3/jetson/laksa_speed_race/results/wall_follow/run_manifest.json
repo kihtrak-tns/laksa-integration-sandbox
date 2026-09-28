@@ -237,7 +237,7 @@
       -0.05
     ]
   ],
-  "run_at_utc": "2026-09-28T02:27:11.397491+00:00",
+  "run_at_utc": "2026-09-28T02:31:41.674608+00:00",
   "runs": [
     {
       "applied_speed_max_mps": 0.37999954428161914,
@@ -2416,7 +2416,7 @@
       "verdict": "PASS"
     }
   ],
-  "sandbox_source_sha": "e34eb13ea952802135530d2e02c555beaa6eb57f",
+  "sandbox_source_sha": "e34eb133070c4869c9b345c73fddf4ad24e220ed",
   "schema_version": "laksa-wall-follow-campaign-v1",
   "seeds": [
     101,
