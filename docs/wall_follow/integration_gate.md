@@ -47,17 +47,17 @@ On a Docker/ROS 2 Humble host, the still-unverified ROS boundary can be run with
 docker compose -f docker-compose.c1.yaml up --build --abort-on-container-exit wall-follow
 ```
 
-On 2026-09-28, availability checks found no `docker` or `ros2` executable on
-Windows and neither executable nor `/opt/ros/humble/setup.bash` in the local
-Ubuntu-22.04 WSL instance. The launch command above was therefore not run and
-the ROS 2 Humble gate remains `UNVERIFIED`; no substitute runtime result is
-claimed.
+On 2026-09-28, the gate was checked again: neither `docker` nor `ros2` exists
+on Windows, and the local Ubuntu-22.04 WSL instance has neither executable nor
+`/opt/ros/humble/setup.bash`. The launch command above was therefore not run.
+ROS scan/request rates, forced-collision terminal latching, prevention of later
+motion/steps, and fresh-episode behavior after launch restart all remain
+`UNVERIFIED`; no substitute runtime result is claimed. See
+[`ros_humble_gate.md`](ros_humble_gate.md).
 
-The latest source revision changes occupancy resolution, clearance sampling,
-and obstacle latency definitions. Previous results under
-`results/wall_follow_20hz` are historical. Do not mark the new campaign PASS
-until `results/wall_follow_10mm` is generated and inspected on a host with the
-pinned Gym checkout.
+The current 10 mm campaign was generated with the pinned Gym checkout and all
+85 run records were inspected. Previous results under
+`results/wall_follow_20hz` remain historical.
 
 ## Next human-run gate
 

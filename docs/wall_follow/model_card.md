@@ -55,7 +55,7 @@ perturbations. A pass requires reaching that scenario's metric finish without
 Gym collision. The revised 10 mm occupancy resolution makes the rendered
 19/20/21-inch entries distinct; each manifest records the rasterized width.
 The earlier 20 mm maps rasterized 20 and 21 inches identically. The revised
-geometry still needs a full Gym campaign rerun and does not claim the real
+geometry passed the recorded full Gym campaign but does not claim the real
 course shape.
 
 Fault cases inject controller crash, silent publisher, frozen and delayed
@@ -80,10 +80,22 @@ No closed-loop race lap is executed, so lap completion remains `UNVERIFIED`;
 these runs are not three-lap or speed-course validation.
 
 The prior 20 Hz-control evidence is stored under `results/wall_follow_20hz`.
-It predates the revised maps, clearance metric, and obstacle timing. A
-replacement Gym campaign is pending.
+It predates the revised maps, clearance metric, and obstacle timing.
 The original 100 Hz-controller campaign remains unchanged under
 `results/wall_follow` for comparison.
+
+The current review-fix campaign uses 10 mm occupancy cells and is stored under
+`results/wall_follow_10mm`. Its tested source is
+`290a2f3b22b3dc12443535fec7d2545e47ca5dcf`; its configuration SHA-256 is
+`b1fa0b84e1b36a947eae3f59dfb55651fc50a74684aa6534b4280e14698913e7`.
+Rendered entry widths are 0.48, 0.50, 0.54, and 0.76 m for the nominal
+19-, 20-, 21-, and 30-inch profiles. The minimum recorded perimeter-sampled
+clearance estimate is 0.0483 m.
+
+Obstacle timing begins when a scan first places the obstacle inside the 0.75 m
+slowdown threshold. The manifest separately records detection-to-stop-request,
+detection-to-zero-applied, stop-request-to-zero-applied, and distance after the
+stop request. A safe stop remains distinct from traversal or lap completion.
 
 ## Known gaps
 

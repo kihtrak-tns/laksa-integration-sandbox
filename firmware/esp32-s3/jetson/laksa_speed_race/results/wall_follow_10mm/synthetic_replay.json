@@ -1,0 +1,62 @@
+{
+  "fixture": "test\\fixtures\\synthetic_scan_bag_fixture.json",
+  "frame_count": 6,
+  "moving_request_count": 3,
+  "outputs": [
+    {
+      "brake": true,
+      "reason": "recovery_gate",
+      "speed_mps": 0.0,
+      "stamp_s": 0.0,
+      "steering_angle_rad": 0.0,
+      "wall_distance_m": 0.254,
+      "wall_heading_rad": 0.0
+    },
+    {
+      "brake": true,
+      "reason": "recovery_gate",
+      "speed_mps": 0.0,
+      "stamp_s": 0.05,
+      "steering_angle_rad": 0.0,
+      "wall_distance_m": 0.254,
+      "wall_heading_rad": 0.0
+    },
+    {
+      "brake": true,
+      "reason": "recovery_gate",
+      "speed_mps": 0.0,
+      "stamp_s": 0.1,
+      "steering_angle_rad": 0.0,
+      "wall_distance_m": 0.254,
+      "wall_heading_rad": 0.0
+    },
+    {
+      "brake": false,
+      "reason": "tracking",
+      "speed_mps": 0.039999999999999994,
+      "stamp_s": 0.15,
+      "steering_angle_rad": 0.0,
+      "wall_distance_m": 0.254,
+      "wall_heading_rad": 0.0
+    },
+    {
+      "brake": false,
+      "reason": "tracking",
+      "speed_mps": 0.08000000000000002,
+      "stamp_s": 0.2,
+      "steering_angle_rad": -0.009649116689664812,
+      "wall_distance_m": 0.25349999999999995,
+      "wall_heading_rad": -0.009999666686665234
+    },
+    {
+      "brake": false,
+      "reason": "tracking",
+      "speed_mps": 0.12000000000000001,
+      "stamp_s": 0.25,
+      "steering_angle_rad": 0.004908503310334858,
+      "wall_distance_m": 0.24950000000000003,
+      "wall_heading_rad": -0.009999666686665243
+    }
+  ],
+  "real_rplidar_replay": "PENDING"
+}
