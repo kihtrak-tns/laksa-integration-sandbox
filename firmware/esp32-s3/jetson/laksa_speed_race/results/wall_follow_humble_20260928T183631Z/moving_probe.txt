@@ -1,0 +1,41 @@
+publisher: beginning loop
+publishing #1: ackermann_msgs.msg.AckermannDriveStamped(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=0, nanosec=0), frame_id=''), drive=ackermann_msgs.msg.AckermannDrive(steering_angle=0.2, steering_angle_velocity=0.0, speed=0.38, acceleration=0.0, jerk=0.0))
+
+publishing #2: ackermann_msgs.msg.AckermannDriveStamped(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=0, nanosec=0), frame_id=''), drive=ackermann_msgs.msg.AckermannDrive(steering_angle=0.2, steering_angle_velocity=0.0, speed=0.38, acceleration=0.0, jerk=0.0))
+
+publishing #3: ackermann_msgs.msg.AckermannDriveStamped(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=0, nanosec=0), frame_id=''), drive=ackermann_msgs.msg.AckermannDrive(steering_angle=0.2, steering_angle_velocity=0.0, speed=0.38, acceleration=0.0, jerk=0.0))
+
+publishing #4: ackermann_msgs.msg.AckermannDriveStamped(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=0, nanosec=0), frame_id=''), drive=ackermann_msgs.msg.AckermannDrive(steering_angle=0.2, steering_angle_velocity=0.0, speed=0.38, acceleration=0.0, jerk=0.0))
+
+publishing #5: ackermann_msgs.msg.AckermannDriveStamped(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=0, nanosec=0), frame_id=''), drive=ackermann_msgs.msg.AckermannDrive(steering_angle=0.2, steering_angle_velocity=0.0, speed=0.38, acceleration=0.0, jerk=0.0))
+
+publishing #6: ackermann_msgs.msg.AckermannDriveStamped(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=0, nanosec=0), frame_id=''), drive=ackermann_msgs.msg.AckermannDrive(steering_angle=0.2, steering_angle_velocity=0.0, speed=0.38, acceleration=0.0, jerk=0.0))
+
+publishing #7: ackermann_msgs.msg.AckermannDriveStamped(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=0, nanosec=0), frame_id=''), drive=ackermann_msgs.msg.AckermannDrive(steering_angle=0.2, steering_angle_velocity=0.0, speed=0.38, acceleration=0.0, jerk=0.0))
+
+publishing #8: ackermann_msgs.msg.AckermannDriveStamped(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=0, nanosec=0), frame_id=''), drive=ackermann_msgs.msg.AckermannDrive(steering_angle=0.2, steering_angle_velocity=0.0, speed=0.38, acceleration=0.0, jerk=0.0))
+
+publishing #9: ackermann_msgs.msg.AckermannDriveStamped(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=0, nanosec=0), frame_id=''), drive=ackermann_msgs.msg.AckermannDrive(steering_angle=0.2, steering_angle_velocity=0.0, speed=0.38, acceleration=0.0, jerk=0.0))
+
+publishing #10: ackermann_msgs.msg.AckermannDriveStamped(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=0, nanosec=0), frame_id=''), drive=ackermann_msgs.msg.AckermannDrive(steering_angle=0.2, steering_angle_velocity=0.0, speed=0.38, acceleration=0.0, jerk=0.0))
+
+publishing #11: ackermann_msgs.msg.AckermannDriveStamped(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=0, nanosec=0), frame_id=''), drive=ackermann_msgs.msg.AckermannDrive(steering_angle=0.2, steering_angle_velocity=0.0, speed=0.38, acceleration=0.0, jerk=0.0))
+
+publishing #12: ackermann_msgs.msg.AckermannDriveStamped(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=0, nanosec=0), frame_id=''), drive=ackermann_msgs.msg.AckermannDrive(steering_angle=0.2, steering_angle_velocity=0.0, speed=0.38, acceleration=0.0, jerk=0.0))
+
+publishing #13: ackermann_msgs.msg.AckermannDriveStamped(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=0, nanosec=0), frame_id=''), drive=ackermann_msgs.msg.AckermannDrive(steering_angle=0.2, steering_angle_velocity=0.0, speed=0.38, acceleration=0.0, jerk=0.0))
+
+publishing #14: ackermann_msgs.msg.AckermannDriveStamped(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=0, nanosec=0), frame_id=''), drive=ackermann_msgs.msg.AckermannDrive(steering_angle=0.2, steering_angle_velocity=0.0, speed=0.38, acceleration=0.0, jerk=0.0))
+
+publishing #15: ackermann_msgs.msg.AckermannDriveStamped(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=0, nanosec=0), frame_id=''), drive=ackermann_msgs.msg.AckermannDrive(steering_angle=0.2, steering_angle_velocity=0.0, speed=0.38, acceleration=0.0, jerk=0.0))
+
+publishing #16: ackermann_msgs.msg.AckermannDriveStamped(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=0, nanosec=0), frame_id=''), drive=ackermann_msgs.msg.AckermannDrive(steering_angle=0.2, steering_angle_velocity=0.0, speed=0.38, acceleration=0.0, jerk=0.0))
+
+publishing #17: ackermann_msgs.msg.AckermannDriveStamped(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=0, nanosec=0), frame_id=''), drive=ackermann_msgs.msg.AckermannDrive(steering_angle=0.2, steering_angle_velocity=0.0, speed=0.38, acceleration=0.0, jerk=0.0))
+
+publishing #18: ackermann_msgs.msg.AckermannDriveStamped(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=0, nanosec=0), frame_id=''), drive=ackermann_msgs.msg.AckermannDrive(steering_angle=0.2, steering_angle_velocity=0.0, speed=0.38, acceleration=0.0, jerk=0.0))
+
+publishing #19: ackermann_msgs.msg.AckermannDriveStamped(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=0, nanosec=0), frame_id=''), drive=ackermann_msgs.msg.AckermannDrive(steering_angle=0.2, steering_angle_velocity=0.0, speed=0.38, acceleration=0.0, jerk=0.0))
+
+publishing #20: ackermann_msgs.msg.AckermannDriveStamped(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=0, nanosec=0), frame_id=''), drive=ackermann_msgs.msg.AckermannDrive(steering_angle=0.2, steering_angle_velocity=0.0, speed=0.38, acceleration=0.0, jerk=0.0))
+

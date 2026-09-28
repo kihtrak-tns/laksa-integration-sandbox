@@ -1,0 +1,4 @@
+[INFO] [launch]: All log files can be found below /tmp/ros-logs/2026-09-28-18-39-14-686994-4eabcbf4401f-1
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [wall_follow_gym_mock-1]: process started with pid [49]
+[INFO] [wall_follow_controller-2]: process started with pid [51]

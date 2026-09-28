@@ -134,6 +134,76 @@ attributed as the container's exact tested commit. The collision, rejected
 moving-request/frozen-step, and launch-restart/fresh-episode checks also remain
 unrun. The overall gate remains **UNVERIFIED**.
 
+## Operator collision and moving-request probe (2026-09-28)
+
+The operator captured evidence in
+`firmware/esp32-s3/jetson/laksa_speed_race/results/wall_follow_humble_20260928T183631Z/`.
+The saved host checkout SHA is
+`b6f5bd0a799e594ea4a47b1ade4179e0586c7d22`; the collision container image ID
+is
+`sha256:d128d8d010d1b175a85ec6a97836274ac5c8685008b3bc180382343e4eaac233`.
+The transcript does not include a build or label tying that image digest to
+the saved host source SHA, so this is not a verified source-to-image mapping.
+
+The operator captured episode status before and after publishing 20 mock
+moving requests, then saved the launch logs:
+
+```bash
+sudo docker exec wall-follow-collision /usr/local/bin/c1_entrypoint.sh \
+  timeout 10 ros2 topic echo --once /sim/laksa/gym_status
+sudo docker exec wall-follow-collision /usr/local/bin/c1_entrypoint.sh \
+  ros2 topic pub --rate 20 --times 20 \
+  /sim/laksa/motion_request ackermann_msgs/msg/AckermannDriveStamped \
+  '{drive: {speed: 0.38, steering_angle: 0.2}}'
+sudo docker exec wall-follow-collision /usr/local/bin/c1_entrypoint.sh \
+  timeout 10 ros2 topic echo --once /sim/laksa/gym_status
+sudo docker logs wall-follow-collision
+sudo docker compose -f docker-compose.c1.yaml run -d --no-deps \
+  --name wall-follow-restart wall-follow \
+  ros2 launch laksa_speed_race wall_follow_sim.launch.py collision_test:=false
+sudo docker exec wall-follow-restart /usr/local/bin/c1_entrypoint.sh \
+  timeout 10 ros2 topic echo --once /sim/laksa/gym_status
+sudo docker logs wall-follow-restart
+# The first echo ran before graph discovery completed. Follow up on the same
+# live container and save the later startup log/status:
+sudo docker logs --tail=100 wall-follow-restart
+sudo docker exec wall-follow-restart /usr/local/bin/c1_entrypoint.sh \
+  timeout 20 ros2 topic echo --once /sim/laksa/gym_status
+```
+
+The launch log explicitly reports `gym_collision` for episode
+`546acfc1a992492b990639820f420b5b` at `gym_steps=1`. The status snapshots
+have that same episode ID and step count; `rejected_terminal_requests` rises
+from 32,691 to 32,796. `moving_probe.txt` shows 20 published requests at
+0.38 m/s and 0.2 rad. The rejection counter also includes any continuing
+controller requests during the observation interval, so the 105-count delta is
+not attributed solely to the 20-message probe. No later Gym step was observed.
+Because simulator motion advances through Gym steps, this supports the
+simulation's terminal no-motion behavior; the capture has no separate
+applied-motion topic trace.
+
+The restart command created container
+`4eabcbf4401fcd5f2bb2b7001ea94874fd899b9ba8e2221afbdf40661abeaa80`. The
+first status query ran before DDS discovery completed and warned that the
+topic was not published yet. A later query on the same live container
+(`wall-follow-restart Up 6 minutes`) succeeded. Its startup log records
+`episode_started id=de3fd4b1a3ec445191473d2cff5073de`, distinct from the
+collided episode ID. The status reports that same new ID, 37,209 Gym steps,
+zero rejected requests, and `terminal_reason: null`. This verifies that
+restarting the launch created a new active episode. The initial step counter
+was not captured immediately at startup.
+
+The compact raw capture files are committed beside this record, including the
+initial unavailable-topic response and the later active-episode status in
+`restart_status_initial.yaml`, `restart_status.yaml`, and
+`restart_followup.txt`. The overall
+ROS gate remains **UNVERIFIED** because the scan rate has not been observed
+and the source commit has not been proven to match the running image. See the
+evidence directory's `collision.log`, status snapshots, `moving_probe.txt`,
+`restart.log`, `restart_followup.txt`, `source_sha.txt`, and `image_id.txt`.
+The full capture command sequence is in
+[`capture_commands.sh`](../../firmware/esp32-s3/jetson/laksa_speed_race/results/wall_follow_humble_20260928T183631Z/capture_commands.sh).
+
 ## Offline replay preparation checks
 
 These checks exercised only the portable controller and fake LaserScan-shaped
