@@ -68,7 +68,7 @@ output directory:
 SCAN_BAG=/absolute/path/wall_follow_scan_only_handcarried
 OUT="$PWD/results/wall_follow_real_scan_replay_$(date -u +%Y%m%dT%H%M%SZ)"
 mkdir -p "$OUT"
-docker compose -f docker-compose.c1.yaml run --rm --no-deps \
+sudo docker compose -f docker-compose.c1.yaml run --rm --no-deps \
   -v "$SCAN_BAG:/scan_bag:ro" -v "$OUT:/out" wall-follow bash -lc '
     ros2 run laksa_speed_race wall_follow_controller \
       --ros-args -p use_sim_time:=true > /tmp/controller.log 2>&1 &
@@ -105,9 +105,9 @@ because the current session cannot access Docker. First run the standard
 `wall-follow` Compose service and collect rates in two separate windows:
 
 ```bash
-docker compose -f docker-compose.c1.yaml up --build -d wall-follow
-docker compose -f docker-compose.c1.yaml exec -T wall-follow timeout 8 ros2 topic hz /sim/laksa/scan
-docker compose -f docker-compose.c1.yaml exec -T wall-follow timeout 8 ros2 topic hz /sim/laksa/motion_request
+sudo docker compose -f docker-compose.c1.yaml up --build -d wall-follow
+sudo docker compose -f docker-compose.c1.yaml exec -T wall-follow timeout 8 ros2 topic hz /sim/laksa/scan
+sudo docker compose -f docker-compose.c1.yaml exec -T wall-follow timeout 8 ros2 topic hz /sim/laksa/motion_request
 ```
 
 For a repeatable collision, run a separate launch with the simulation-only
@@ -118,20 +118,20 @@ Restart a second launch and verify a different episode ID with a fresh step
 counter.
 
 ```bash
-docker compose -f docker-compose.c1.yaml run -d --no-deps \
+sudo docker compose -f docker-compose.c1.yaml run -d --no-deps \
   --name wall-follow-collision wall-follow \
   ros2 launch laksa_speed_race wall_follow_sim.launch.py collision_test:=true
-docker exec wall-follow-collision timeout 1 ros2 topic echo --once /sim/laksa/gym_status > collision_before.yaml
-docker exec wall-follow-collision ros2 topic pub --rate 20 --times 20 \
+sudo docker exec wall-follow-collision timeout 1 ros2 topic echo --once /sim/laksa/gym_status > collision_before.yaml
+sudo docker exec wall-follow-collision ros2 topic pub --rate 20 --times 20 \
   /sim/laksa/motion_request ackermann_msgs/msg/AckermannDriveStamped \
   "{drive: {speed: 0.38, steering_angle: 0.2}}"
-docker exec wall-follow-collision timeout 1 ros2 topic echo --once /sim/laksa/gym_status > collision_after.yaml
-docker compose -f docker-compose.c1.yaml run -d --no-deps \
+sudo docker exec wall-follow-collision timeout 1 ros2 topic echo --once /sim/laksa/gym_status > collision_after.yaml
+sudo docker compose -f docker-compose.c1.yaml run -d --no-deps \
   --name wall-follow-restart wall-follow \
   ros2 launch laksa_speed_race wall_follow_sim.launch.py collision_test:=false
-docker exec wall-follow-restart timeout 1 ros2 topic echo --once /sim/laksa/gym_status > restart_status.yaml
-docker logs wall-follow-collision > collision.log 2>&1
-docker stop wall-follow-collision wall-follow-restart
+sudo docker exec wall-follow-restart timeout 1 ros2 topic echo --once /sim/laksa/gym_status > restart_status.yaml
+sudo docker logs wall-follow-collision > collision.log 2>&1
+sudo docker stop wall-follow-collision wall-follow-restart
 ```
 
 The `collision_test` launch currently places the initial vehicle pose 0.25 m
@@ -159,7 +159,7 @@ python -m laksa_speed_race.wall_follow_sim \
 On a Docker/ROS 2 Humble host, the still-unverified ROS boundary can be run with:
 
 ```bash
-docker compose -f docker-compose.c1.yaml up --build --abort-on-container-exit wall-follow
+sudo docker compose -f docker-compose.c1.yaml up --build --abort-on-container-exit wall-follow
 ```
 
 On 2026-09-28, the gate was checked again: neither `docker` nor `ros2` exists

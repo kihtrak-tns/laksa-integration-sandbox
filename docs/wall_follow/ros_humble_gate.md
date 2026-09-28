@@ -106,6 +106,34 @@ scan adapter/export/preflight 5/5 PASS, controller core 10/10 PASS, interface
 isolation/config 2/2 PASS, and `compileall` PASS. Those local checks cover the
 portable path and static interface contracts, not ROS node execution.
 
+## Dell topic-rate observation (operator terminal, 2026-09-28)
+
+The operator ran the following two commands from the package directory using
+`sudo docker compose` and the existing `wall-follow` container:
+
+```bash
+sudo docker compose -f docker-compose.c1.yaml exec -T wall-follow \
+  /usr/local/bin/c1_entrypoint.sh timeout 8 ros2 topic hz /sim/laksa/scan
+sudo docker compose -f docker-compose.c1.yaml exec -T wall-follow \
+  /usr/local/bin/c1_entrypoint.sh timeout 8 ros2 topic hz /sim/laksa/motion_request
+```
+
+The `/sim/laksa/scan` invocation produced no rate line in the supplied
+terminal transcript. The following six averages appeared after the
+`motion_request` invocation:
+
+```text
+19.967, 19.977, 19.989, 19.993, 19.991, 20.001 Hz
+```
+
+Thus the motion-request stream was observed around 20 Hz in that existing
+container; **the scan rate is still unmeasured**. The local source branch head
+is `7dd2bcd64a2fa8a406890456dd2795100e74ba91`, but no image rebuild or runtime
+image/source identity accompanied this observation, so that SHA is not
+attributed as the container's exact tested commit. The collision, rejected
+moving-request/frozen-step, and launch-restart/fresh-episode checks also remain
+unrun. The overall gate remains **UNVERIFIED**.
+
 ## Offline replay preparation checks
 
 These checks exercised only the portable controller and fake LaserScan-shaped
