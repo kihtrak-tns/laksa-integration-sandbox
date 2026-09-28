@@ -100,12 +100,18 @@ available, real scan replay stays **UNVERIFIED**.
 
 ## ROS terminal-collision observation sequence
 
-These commands are prepared for the isolated Docker host and have **not** run
-because the current session cannot access Docker. First run the standard
-`wall-follow` Compose service and collect rates in two separate windows:
+The Dell operator has now built and started the isolated Docker service,
+measured `/sim/laksa/scan` near 20 Hz, and observed a forced Gym collision at
+step 1. The remaining rate, deliberate moving-request, and restart checks
+below have not been supplied; see [`ros_humble_gate.md`](ros_humble_gate.md#dell-host-build-live-scan-and-forced-collision-operator-transcript-2026-09-28).
+Capture the local checkout SHA and container image ID with the logs. From the
+package directory, measure both rates on the **same rebuilt image**:
 
 ```bash
-sudo docker compose -f docker-compose.c1.yaml up --build -d wall-follow
+git rev-parse HEAD
+sudo docker compose -f docker-compose.c1.yaml up --build --force-recreate -d wall-follow
+sudo docker inspect --format '{{.Image}}' \
+  "$(sudo docker compose -f docker-compose.c1.yaml ps -q wall-follow)"
 sudo docker compose -f docker-compose.c1.yaml exec -T wall-follow \
   /usr/local/bin/c1_entrypoint.sh timeout 12 ros2 topic hz /sim/laksa/scan
 sudo docker compose -f docker-compose.c1.yaml exec -T wall-follow \
@@ -143,9 +149,13 @@ The `collision_test` launch currently places the initial vehicle pose 0.25 m
 before the generated corridor entrance wall. Verify the observed
 `gym_collision` reason in the launch logs. The `/sim/laksa/gym_status` 20 Hz
 heartbeat makes both the Gym step count and rejected post-terminal request
-count observable; its episode ID distinguishes a restarted instance. Keep all
-captured logs and YAML output in the simulation evidence directory. The gate
-cannot be marked passed until the measured observations above are recorded.
+count observable; its episode ID distinguishes a restarted instance. Because
+the controller itself keeps publishing after collision, an increased total
+rejection count alone cannot attribute rejections to the deliberate nonzero
+probe. Preserve the publisher transcript and before/after status with the
+same episode ID and unchanged Gym step count; record this attribution limit.
+Keep logs and YAML in the simulation evidence directory. The gate cannot be
+marked passed until those results and a fresh restarted episode are recorded.
 
 ## Reproduce
 
@@ -167,12 +177,10 @@ On a Docker/ROS 2 Humble host, the still-unverified ROS boundary can be run with
 sudo docker compose -f docker-compose.c1.yaml up --build --abort-on-container-exit wall-follow
 ```
 
-On 2026-09-28, the gate was checked again: neither `docker` nor `ros2` exists
-on Windows, and the local Ubuntu-22.04 WSL instance has neither executable nor
-`/opt/ros/humble/setup.bash`. The launch command above was therefore not run.
-ROS scan/request rates, forced-collision terminal latching, prevention of later
-motion/steps, and fresh-episode behavior after launch restart all remain
-`UNVERIFIED`; no substitute runtime result is claimed. See
+The earlier Windows/WSL runner had neither Docker nor ROS 2 Humble. In the
+Dell operator's later isolated launch, ROS scan publication and a forced
+collision were observed. The current-image motion-request rate, deliberate
+moving-probe freeze, and fresh-episode restart are still pending. See
 [`ros_humble_gate.md`](ros_humble_gate.md).
 
 The current 10 mm campaign was generated with the pinned Gym checkout and all
