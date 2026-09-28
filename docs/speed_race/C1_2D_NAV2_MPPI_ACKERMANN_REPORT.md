@@ -997,3 +997,78 @@ SHORT_HORIZON_AUTHORIZED=YES
 
 No short horizon, repeat, determinism run, or Trial 1 was executed. Those
 remain outside this Gate-C task.
+
+## C1.2d — bounded MPPI short-horizon qualification
+
+### Harness change
+
+The follow-up qualification harness adds `--mode short-horizon`. It passes
+`qualification_step_limit:=100` to the existing Gym adapter, which remains the
+single `Gym.step()` authority. At the frozen `dt_s=0.01`, this caps simulated
+time at 1.0 second. The owned launch keeps the existing finite 120-second
+default timeout and process-group shutdown.
+
+The harness validator retains the adapter's `summary.json`,
+`controller_telemetry.csv`, `commands.csv`, `trajectory.csv`, and the owned
+launch's `launch.log`, along with `harness_result.json`. It checks clean limit
+completion separately from early collision, off-track, invalid command,
+safety veto, timeout, or crashed child; records the first fault and its step;
+checks finite bounded speed and steering, monotonically increasing unique
+state stamps, command/step sequence and simulation-time alignment, duplicate or
+mismatched stamp counters, zero steps after terminal, final applied zero, and
+empty owned-process shutdown. The short-horizon outcome is recorded as clean
+only at exactly 100 steps with all checks passing.
+
+No launch, Gym adapter, Nav2 controller, MPPI parameter, map, course geometry,
+raceline, footprint, ThreeLapGate, vehicle model, or Gym pin was changed.
+Physical-topic isolation is unchanged.
+
+### Dell verification and execution disposition
+
+Tested harness source SHA: `7a46280a0694ed740856d57e84721efdb2f6b49f`.
+Portable checks run on the Dell:
+
+```text
+python3 -m unittest discover -s test -p 'test_c1_short_horizon.py' -v
+Ran 3 tests — OK
+python3 -m py_compile laksa_speed_race/closed_loop_qualification.py test/test_c1_short_horizon.py
+PASS
+git diff --check
+PASS
+```
+
+The local runtime inventory found Docker 29.8.1 and Compose 5.5.1, but no
+`/opt/ros/humble`, `ros2`, `colcon`, `rclpy`, `ackermann_msgs`, Nav2 MPPI,
+`f1tenth_gym`, or `gymnasium`. Pytest is also absent; the focused tests use the
+Python standard library. No 100-step ROS/Gym trial was started. No Orin or car
+was accessed.
+
+Therefore `C1.2D_SHORT_HORIZON_100=UNVERIFIED`. No runtime artifact directory
+was created on the Dell. On an isolated ARM64 Humble host with Nav2 built from
+the pinned source, the tested C1 workspace built at this commit, the
+`ackermann_msgs` overlay, and a clean Gym checkout at
+`bdaec1420c3b0f103858d289866d0d4e2e597c30`, use this command after provisioning
+the explicit directories shown below:
+
+```bash
+cd "$(git rev-parse --show-toplevel)/firmware/esp32-s3/jetson/laksa_speed_race"
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+C1_HOME="$HOME/laksa-c1-short-horizon"
+export LAKSA_GIT_SHA=7a46280a0694ed740856d57e84721efdb2f6b49f
+export ACKERMANN_MSGS_PREFIX="$C1_HOME/ackermann_root/opt/ros/humble"
+export LAKSA_C1_WORKSPACE="$C1_HOME/workspace"
+export LAKSA_C1_VENV="$C1_HOME/workspace/venv"
+export F1TENTH_GYM_CHECKOUT="$C1_HOME/src/f1tenth_gym"
+export F1TENTH_GYM_PYDEPS="$C1_HOME/pydeps"
+test "$(git -C "$REPO_ROOT" rev-parse HEAD)" = "$LAKSA_GIT_SHA"
+./docker/c1_native_runtime.sh \
+  --mode short-horizon \
+  --output-dir "/tmp/laksa-c1.2d-short-horizon-100-$LAKSA_GIT_SHA" \
+  --timeout 120
+```
+
+The output directory is intended to contain the five retained runtime
+artifacts listed above. Its `harness_result.json` reports the exact tested
+commit and first failure step, or `CLEAN_LIMIT_REACHED` only after all 100
+steps and shutdown checks pass. Any result remains a one-second simulation
+qualification and does not establish a lap or physical-car readiness.
