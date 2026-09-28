@@ -2,7 +2,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from laksa_speed_race.wall_follow_maps import CorridorMap, campaign_profiles, generate_corridor_map
+from laksa_speed_race.wall_follow_maps import (
+    CorridorMap,
+    campaign_profiles,
+    corner_profiles,
+    generate_corridor_map,
+)
 
 
 class MapTests(unittest.TestCase):
@@ -18,6 +23,13 @@ class MapTests(unittest.TestCase):
             one = generate_corridor_map(profile, Path(first))
             two = generate_corridor_map(profile, Path(second))
             self.assertEqual(one["files"], two["files"])
+
+    def test_corner_profile_has_free_entry_arc_and_exit(self):
+        profile = corner_profiles()[0]
+        self.assertTrue(profile.is_free(1.0, profile.entry_y_m))
+        self.assertTrue(profile.is_free(3.0, profile.entry_y_m))
+        self.assertTrue(profile.is_free(5.0, 4.5))
+        self.assertGreater(profile.point_clearance(5.0, 4.5), 0.0)
 
 
 if __name__ == "__main__":

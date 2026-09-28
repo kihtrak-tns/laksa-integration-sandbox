@@ -61,6 +61,8 @@
     "range_max_m": 30.0,
     "noise_std_m": 0.002,
     "rate_hz": 20,
+    "controller_request_rate_hz": 20,
+    "gym_step_rate_hz": 100,
     "base_link_to_lidar": [0.31542, 0.0, 0.0],
     "classification": "simulation-only mount; inherited pi-yaw proxy rejected because it creates a forward blind sector in this 270-degree Gym scan"
   },

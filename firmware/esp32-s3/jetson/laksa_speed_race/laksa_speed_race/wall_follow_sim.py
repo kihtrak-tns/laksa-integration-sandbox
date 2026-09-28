@@ -20,10 +20,19 @@ from .wall_follow_core import (
     ScanFrame,
     WallFollowController,
 )
-from .wall_follow_maps import CorridorMap, campaign_profiles, generate_corridor_map
+from .wall_follow_maps import (
+    CornerMap,
+    CorridorMap,
+    campaign_profiles,
+    corner_profiles,
+    generate_corridor_map,
+)
 
 
 DT_S = 0.01
+GYM_STEP_RATE_HZ = 100
+SCAN_REQUEST_RATE_HZ = 20
+SCAN_INTERVAL_STEPS = GYM_STEP_RATE_HZ // SCAN_REQUEST_RATE_HZ
 F1TENTH_GYM_SHA = "bdaec1420c3b0f103858d289866d0d4e2e597c30"
 F1TENTH_GYM_ROS_SHA = "08395766c4d9dc5a763381f1dd6fa4a3d68df66e"
 
@@ -119,7 +128,12 @@ def _state(observation: dict[str, Any]) -> tuple[float, float, float, float, boo
     )
 
 
-def _minimum_body_clearance(profile: CorridorMap, x_m: float, y_m: float, yaw_rad: float) -> float:
+def _minimum_body_clearance(
+    profile: CorridorMap | CornerMap,
+    x_m: float,
+    y_m: float,
+    yaw_rad: float,
+) -> float:
     cosine, sine = math.cos(yaw_rad), math.sin(yaw_rad)
     center_x = x_m + 0.135 * cosine
     center_y = y_m + 0.135 * sine
@@ -128,17 +142,31 @@ def _minimum_body_clearance(profile: CorridorMap, x_m: float, y_m: float, yaw_ra
         for lateral in (-0.148, 0.148):
             corner_x = center_x + longitudinal * cosine - lateral * sine
             corner_y = center_y + longitudinal * sine + lateral * cosine
-            clearances.extend(
-                [
-                    corner_y - profile.right_boundary_y(corner_x),
-                    profile.top_y_m - corner_y,
-                    corner_x - profile.start_wall_x_m,
-                    profile.end_wall_x_m - corner_x,
-                ]
-            )
-            if profile.obstacle_x_m is not None and corner_x <= profile.obstacle_x_m:
-                clearances.append(profile.obstacle_x_m - corner_x)
+            clearances.append(profile.point_clearance(corner_x, corner_y))
     return min(clearances)
+
+
+def _start_pose(
+    profile: CorridorMap | CornerMap,
+    config: ControllerConfig,
+    lateral_offset_m: float,
+    yaw_offset_rad: float,
+) -> tuple[float, float, float]:
+    if isinstance(profile, CornerMap):
+        right_wall_y = profile.entry_y_m - profile.width_m / 2.0
+    else:
+        right_wall_y = profile.bottom_y_m
+    return (
+        1.0,
+        right_wall_y + config.target_wall_distance_m + lateral_offset_m,
+        yaw_offset_rad,
+    )
+
+
+def _completion(profile: CorridorMap | CornerMap, x_m: float, y_m: float) -> bool:
+    if isinstance(profile, CornerMap):
+        return y_m >= 5.70
+    return x_m >= 7.20
 
 
 def _zero_row(
@@ -159,7 +187,7 @@ def _zero_row(
 
 
 def run_case(
-    profile: CorridorMap,
+    profile: CorridorMap | CornerMap,
     map_stub: Path,
     *,
     seed: int,
@@ -167,12 +195,12 @@ def run_case(
     lateral_offset_m: float,
     yaw_offset_rad: float,
     fault: str | None = None,
-    max_steps: int = 2200,
+    max_steps: int = 3600,
     controller_config: ControllerConfig | None = None,
     freshness_config: FreshnessConfig | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     config = controller_config or ControllerConfig()
-    start_pose = (1.0, profile.bottom_y_m + config.target_wall_distance_m + lateral_offset_m, yaw_offset_rad)
+    start_pose = _start_pose(profile, config, lateral_offset_m, yaw_offset_rad)
     env, observation = create_wall_environment(map_stub, seed, start_pose)
     controller = WallFollowController(config)
     gate = RequestFreshnessGate(freshness_config)
@@ -189,6 +217,9 @@ def run_case(
     first_stop_reason: str | None = None
     positive_request_seen = False
     last_request = MotionRequest(0.0, 0.0, True, "initial", 0.0, 0.0)
+    scan_event_count = 0
+    controller_update_count = 0
+    request_publish_count = 0
 
     try:
         for step in range(max_steps):
@@ -199,10 +230,12 @@ def run_case(
                 collision_count += 1
                 failure_reason = "gym_collision"
                 break
-            if x_m >= 7.20 and fault not in {"controller_crash", "silent_publisher", "command_burst"}:
+            if (
+                _completion(profile, x_m, y_m)
+                and not completion
+                and fault not in {"controller_crash", "silent_publisher", "command_burst"}
+            ):
                 completion = True
-                last_request = MotionRequest(0.0, 0.0, True, "mission_complete", now_s, now_s)
-                gate.receive(last_request, now_s)
                 if fault_start_s is None:
                     fault_start_s = now_s
                     fault_start_distance = distance_travelled
@@ -214,15 +247,28 @@ def run_case(
             if fault == "sensor_dropout" and inject:
                 compute_request = False
                 publish_request = False
-            if inject and fault_start_s is None and fault not in {None, "obstacle_ahead"}:
+            if inject and fault_start_s is None and fault not in {
+                None, "obstacle_ahead", "opening_obstacle",
+            }:
                 fault_start_s = now_s
                 fault_start_distance = distance_travelled
 
-            if compute_request:
+            scan_event = step % SCAN_INTERVAL_STEPS == 0
+            request_published = False
+            if scan_event:
+                scan_event_count += 1
+            if scan_event and completion:
+                last_request = MotionRequest(0.0, 0.0, True, "mission_complete", now_s, now_s)
+                gate.receive(last_request, now_s)
+                request_publish_count += 1
+                request_published = True
+            elif scan_event and compute_request:
                 header_stamp = now_s
                 ranges = scan_ranges
                 if fault == "stale_scan" and inject:
                     header_stamp = 2.49
+                if fault == "delayed_scan" and inject:
+                    header_stamp = now_s - 0.25
                 if fault == "malformed_scan" and inject:
                     ranges = [math.nan] * len(scan_ranges)
                 scan = ScanFrame(
@@ -235,16 +281,19 @@ def run_case(
                     now_s,
                 )
                 last_request, diagnostics = controller.update(scan, now_s)
+                controller_update_count += 1
                 if last_request.speed_mps > 1e-6:
                     positive_request_seen = True
                 if positive_request_seen and last_request.speed_mps <= 1e-6 and first_stop_reason is None:
                     first_stop_reason = last_request.reason
                     request_stop_distance = distance_travelled
-                    if fault == "obstacle_ahead":
+                    if fault in {"obstacle_ahead", "opening_obstacle"}:
                         fault_start_s = now_s
                         fault_start_distance = distance_travelled
                 if publish_request:
                     gate.receive(last_request, now_s)
+                    request_publish_count += 1
+                    request_published = True
                 if fault == "command_burst" and step == 250:
                     for _ in range(5):
                         gate.receive(last_request, now_s)
@@ -275,6 +324,8 @@ def run_case(
                     "applied_reason": applied.reason,
                     "distance_travelled_m": distance_travelled,
                     "collision": int(new_collision),
+                    "scan_event": int(scan_event),
+                    "request_published": int(request_published),
                 }
             )
             if new_collision:
@@ -286,8 +337,8 @@ def run_case(
                 break
             stopping_fault = fault in {
                 "controller_crash", "silent_publisher", "stale_scan",
-                "malformed_scan", "sensor_dropout", "command_burst",
-                "obstacle_ahead",
+                "delayed_scan", "malformed_scan", "sensor_dropout",
+                "command_burst", "obstacle_ahead", "opening_obstacle",
             }
             if (
                 (completion or (stopping_fault and fault_start_s is not None and positive_request_seen))
@@ -315,6 +366,12 @@ def run_case(
         verdict = "PASS"
     else:
         verdict = "FAIL"
+    duration_s = len(rows) * DT_S
+    scenario_class = "corner_completion" if isinstance(profile, CornerMap) else "corridor_traversal"
+    if fault in {"obstacle_ahead", "opening_obstacle"}:
+        scenario_class = "safe_stop"
+    elif fault is not None:
+        scenario_class = "fault_stop_or_recovery"
     summary = {
         "map": profile.name,
         "seed": seed,
@@ -323,6 +380,13 @@ def run_case(
         "fault": fault,
         "verdict": verdict,
         "completion": completion,
+        "completion_kind": (
+            "corner_completion" if completion and isinstance(profile, CornerMap)
+            else "corridor_traversal" if completion
+            else None
+        ),
+        "scenario_class": scenario_class,
+        "lap_count": 0,
         "failure_reason": failure_reason,
         "first_stop_reason": first_stop_reason,
         "collision_count": collision_count,
@@ -342,6 +406,17 @@ def run_case(
         "time_to_zero_applied_s": None if fault_start_s is None or applied_zero_s is None else max(0.0, applied_zero_s - fault_start_s),
         "simulated_stop_distance_m": stop_distance,
         "steps": len(rows),
+        "gym_step_rate_hz": GYM_STEP_RATE_HZ,
+        "configured_scan_request_rate_hz": SCAN_REQUEST_RATE_HZ,
+        "scan_event_count": scan_event_count,
+        "controller_update_count": controller_update_count,
+        "request_publish_count": request_publish_count,
+        "observed_controller_update_rate_hz": (
+            controller_update_count / duration_s if duration_s > 0.0 else 0.0
+        ),
+        "observed_request_publish_rate_hz": (
+            request_publish_count / duration_s if duration_s > 0.0 else 0.0
+        ),
     }
     return summary, rows
 
@@ -380,12 +455,31 @@ def run_campaign(output_dir: Path, source_sha: str, config_path: Path) -> dict[s
                 )
                 summaries.append(summary)
 
+    for profile in corner_profiles():
+        record = generate_corridor_map(profile, maps_dir / profile.name)
+        map_records[profile.name] = record
+        map_stub = Path(str(record["map_stub"]))
+        for seed in seeds:
+            for pose_id, offset, yaw in poses:
+                summary, _ = run_case(
+                    profile,
+                    map_stub,
+                    seed=seed,
+                    pose_id=pose_id,
+                    lateral_offset_m=offset,
+                    yaw_offset_rad=yaw,
+                    controller_config=controller_config,
+                    freshness_config=freshness_config,
+                )
+                summaries.append(summary)
+
     base_profile = campaign_profiles()[0]
     base_stub = Path(str(map_records[base_profile.name]["map_stub"]))
     for fault in (
         "controller_crash",
         "silent_publisher",
         "stale_scan",
+        "delayed_scan",
         "malformed_scan",
         "sensor_dropout",
         "command_burst",
@@ -410,29 +504,43 @@ def run_campaign(output_dir: Path, source_sha: str, config_path: Path) -> dict[s
                 writer.writeheader()
                 writer.writerows(rows)
 
-    obstacle = replace(base_profile, name="obstacle_ahead", right_recess_start_m=None, right_recess_end_m=None, right_recess_depth_m=0.0, obstacle_x_m=4.0)
-    obstacle_record = generate_corridor_map(obstacle, maps_dir / obstacle.name)
-    map_records[obstacle.name] = obstacle_record
-    obstacle_summary, obstacle_rows = run_case(
-        obstacle,
-        Path(str(obstacle_record["map_stub"])),
-        seed=888,
-        pose_id="nominal",
-        lateral_offset_m=0.0,
-        yaw_offset_rad=0.0,
-        fault="obstacle_ahead",
-        controller_config=controller_config,
-        freshness_config=freshness_config,
+    stop_profiles = (
+        replace(
+            base_profile,
+            name="obstacle_ahead",
+            right_recess_start_m=None,
+            right_recess_end_m=None,
+            right_recess_depth_m=0.0,
+            obstacle_x_m=4.0,
+        ),
+        replace(base_profile, name="opening_obstacle", obstacle_x_m=3.65),
     )
-    summaries.append(obstacle_summary)
-    if obstacle_rows:
-        with (traces_dir / "fault_obstacle_ahead.csv").open("w", newline="", encoding="utf-8") as stream:
-            writer = csv.DictWriter(stream, fieldnames=list(obstacle_rows[0]))
-            writer.writeheader()
-            writer.writerows(obstacle_rows)
+    for obstacle in stop_profiles:
+        obstacle_record = generate_corridor_map(obstacle, maps_dir / obstacle.name)
+        map_records[obstacle.name] = obstacle_record
+        obstacle_summary, obstacle_rows = run_case(
+            obstacle,
+            Path(str(obstacle_record["map_stub"])),
+            seed=888,
+            pose_id="nominal",
+            lateral_offset_m=0.0,
+            yaw_offset_rad=0.0,
+            fault=obstacle.name,
+            controller_config=controller_config,
+            freshness_config=freshness_config,
+        )
+        summaries.append(obstacle_summary)
+        if obstacle_rows:
+            with (traces_dir / f"fault_{obstacle.name}.csv").open("w", newline="", encoding="utf-8") as stream:
+                writer = csv.DictWriter(stream, fieldnames=list(obstacle_rows[0]))
+                writer.writeheader()
+                writer.writerows(obstacle_rows)
 
     nominal = [item for item in summaries if item["fault"] is None]
     faults = [item for item in summaries if item["fault"] is not None]
+    corridors = [item for item in nominal if item["scenario_class"] == "corridor_traversal"]
+    corners = [item for item in nominal if item["scenario_class"] == "corner_completion"]
+    safe_stops = [item for item in summaries if item["scenario_class"] == "safe_stop"]
     manifest = {
         "schema_version": "laksa-wall-follow-campaign-v1",
         "run_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -447,10 +555,36 @@ def run_campaign(output_dir: Path, source_sha: str, config_path: Path) -> dict[s
         "maps": map_records,
         "seeds": list(seeds),
         "poses": [list(item) for item in poses],
+        "cadence": {
+            "gym_step_rate_hz": GYM_STEP_RATE_HZ,
+            "scan_rate_hz": SCAN_REQUEST_RATE_HZ,
+            "request_rate_hz": SCAN_REQUEST_RATE_HZ,
+            "gym_steps_per_scan": SCAN_INTERVAL_STEPS,
+        },
         "nominal_run_count": len(nominal),
         "nominal_pass_count": sum(item["verdict"] == "PASS" for item in nominal),
         "fault_run_count": len(faults),
         "fault_pass_count": sum(item["verdict"] == "PASS" for item in faults),
+        "outcomes": {
+            "corridor_traversal": {
+                "run_count": len(corridors),
+                "pass_count": sum(item["verdict"] == "PASS" for item in corridors),
+            },
+            "safe_stop": {
+                "run_count": len(safe_stops),
+                "pass_count": sum(item["verdict"] == "PASS" for item in safe_stops),
+            },
+            "corner_completion": {
+                "run_count": len(corners),
+                "pass_count": sum(item["verdict"] == "PASS" for item in corners),
+            },
+            "lap_completion": {
+                "run_count": 0,
+                "pass_count": 0,
+                "status": "UNVERIFIED",
+                "reason": "No closed-loop race-lap scenario is part of this wall-follow campaign.",
+            },
+        },
         "overall": "PASS" if all(item["verdict"] == "PASS" for item in summaries) else "PARTIAL",
         "physical_hardware_touched": False,
         "physical_command_topics_used": False,

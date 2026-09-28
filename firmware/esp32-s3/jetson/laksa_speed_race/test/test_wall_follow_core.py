@@ -102,6 +102,17 @@ class WallFollowerTests(unittest.TestCase):
         self.assertIn(request.reason, {"front_clearance_stop", "front_ttc_stop"})
         self.assertIsNotNone(diagnostics.front_clearance_m)
 
+    def test_opening_with_front_obstacle_stops_before_bridge_motion(self):
+        controller = WallFollowController()
+        recover(controller, synthetic_scan())
+        scan = synthetic_scan(intercept=-0.55, obstacle_x=0.55, stamp=0.20)
+        request, diagnostics = controller.update(scan, 0.20)
+        self.assertTrue(request.brake)
+        self.assertEqual(request.speed_mps, 0.0)
+        self.assertIn(request.reason, {"front_clearance_stop", "front_ttc_stop"})
+        self.assertNotEqual(request.reason, "opening_bridge")
+        self.assertIsNotNone(diagnostics.front_clearance_m)
+
     def test_limits_are_finite_and_bounded(self):
         controller = WallFollowController()
         request, _ = recover(controller, synthetic_scan(intercept=-0.06, slope=0.8))

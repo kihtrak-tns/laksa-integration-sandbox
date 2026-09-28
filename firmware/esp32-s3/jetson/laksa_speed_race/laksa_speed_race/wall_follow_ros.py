@@ -13,7 +13,7 @@ import tempfile
 
 from .wall_follow_core import MotionRequest, RequestFreshnessGate, ScanFrame, WallFollowController
 from .wall_follow_maps import campaign_profiles, generate_corridor_map
-from .wall_follow_sim import DT_S, create_wall_environment
+from .wall_follow_sim import DT_S, SCAN_INTERVAL_STEPS, create_wall_environment
 
 
 SCAN_TOPIC = "/sim/laksa/scan"
@@ -175,7 +175,7 @@ def simulator_main() -> None:
             command.drive.steering_angle = float(applied.steering_angle_rad)
             self.applied_pub.publish(command)
             self.publish_pose(stamp, float(state[0]), float(state[1]), float(state[4]), float(state[3]))
-            if round(self.sim_time_s / DT_S) % 5 == 0:
+            if round(self.sim_time_s / DT_S) % SCAN_INTERVAL_STEPS == 0:
                 self.publish_scan(stamp, agent["scan"])
             if bool(agent["collision"]) or done or truncated:
                 self.gate = RequestFreshnessGate()

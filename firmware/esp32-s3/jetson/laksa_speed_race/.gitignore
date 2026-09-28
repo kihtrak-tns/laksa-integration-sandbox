@@ -4,6 +4,8 @@ log/
 results/*
 !results/wall_follow/
 results/wall_follow/maps/
+!results/wall_follow_20hz/
+results/wall_follow_20hz/maps/
 __pycache__/
 .pytest_cache/
 *.pyc

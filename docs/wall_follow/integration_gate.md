@@ -17,6 +17,10 @@ The mock applies a 200 ms request timeout independently of the controller and
 continues integrating toward zero after request loss. No physical message type,
 topic, device, service, SSH session, or enable path is used.
 
+The evidence runner uses the same 20 Hz scan/request boundary while Gym and
+the independent watchdog continue at 100 Hz. A missing scan therefore does not
+freeze simulated time or retain a nonzero request indefinitely.
+
 ## Reproduce
 
 From `firmware/esp32-s3/jetson/laksa_speed_race`, with the pinned Gym checkout
@@ -28,7 +32,7 @@ python -m laksa_speed_race.wall_follow_replay test/fixtures/synthetic_scan_bag_f
 python -m laksa_speed_race.wall_follow_sim \
   --config config/wall_follow_v1.json \
   --source-sha "$(git rev-parse HEAD)" \
-  --output-dir results/wall_follow
+  --output-dir results/wall_follow_20hz
 ```
 
 On a Docker/ROS 2 Humble host, the still-unverified ROS boundary can be run with:
@@ -36,6 +40,12 @@ On a Docker/ROS 2 Humble host, the still-unverified ROS boundary can be run with
 ```bash
 docker compose -f docker-compose.c1.yaml up --build --abort-on-container-exit wall-follow
 ```
+
+On 2026-09-28, availability checks found no `docker` or `ros2` executable on
+Windows and neither executable nor `/opt/ros/humble/setup.bash` in the local
+Ubuntu-22.04 WSL instance. The launch command above was therefore not run and
+the ROS 2 Humble gate remains `UNVERIFIED`; no substitute runtime result is
+claimed.
 
 ## Next human-run gate
 

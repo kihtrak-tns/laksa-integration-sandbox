@@ -254,6 +254,28 @@ class WallFollowController:
             bad = ControllerDiagnostics("STOPPED", "too_many_invalid_ranges", valid_ranges, 0, None, None, None, None, header_age, receive_age)
             return self._stop(scan, now_s, "too_many_invalid_ranges", bad)
 
+        # Front safety is independent of wall availability.  Evaluate it
+        # before any opening/wall-loss branch can return a moving request.
+        front_candidates = [
+            x_m - cfg.body_front_m
+            for x_m, y_m, bearing in points
+            if x_m > cfg.body_front_m
+            and abs(bearing) <= cfg.front_sector_half_angle_rad
+            and abs(y_m) <= cfg.front_corridor_half_width_m
+        ]
+        front_clearance = min(front_candidates) if front_candidates else None
+        front_ttc = None
+        if front_clearance is not None and self._speed > 0.02:
+            front_ttc = front_clearance / self._speed
+        front_diagnostics = ControllerDiagnostics(
+            "TRACKING", "front_checked", valid_ranges, 0, None, None,
+            front_clearance, front_ttc, header_age, receive_age,
+        )
+        if front_clearance is not None and front_clearance <= cfg.front_stop_clearance_m:
+            return self._stop(scan, now_s, "front_clearance_stop", front_diagnostics)
+        if front_ttc is not None and front_ttc <= cfg.front_ttc_stop_s:
+            return self._stop(scan, now_s, "front_ttc_stop", front_diagnostics)
+
         side_points = [
             (x_m, y_m)
             for x_m, y_m, _ in points
@@ -261,7 +283,10 @@ class WallFollowController:
             and 0.04 <= cfg.side * y_m <= cfg.maximum_wall_distance_m
         ]
         if len(side_points) < cfg.minimum_wall_points:
-            lost = ControllerDiagnostics("STOPPED", "wall_lost", valid_ranges, 0, None, None, None, None, header_age, receive_age)
+            lost = ControllerDiagnostics(
+                "STOPPED", "wall_lost", valid_ranges, 0, None, None,
+                front_clearance, front_ttc, header_age, receive_age,
+            )
             bridged = self._bridge_opening(scan, now_s, lost)
             if bridged is not None:
                 return bridged
@@ -285,7 +310,7 @@ class WallFollowController:
         if wall_discontinuous:
             discontinuity = ControllerDiagnostics(
                 "OPENING_BRIDGE", "wall_discontinuity", valid_ranges, inlier_count,
-                wall_distance, heading, None, None, header_age, receive_age,
+                wall_distance, heading, front_clearance, front_ttc, header_age, receive_age,
             )
             bridged = self._bridge_opening(scan, now_s, discontinuity)
             if bridged is not None:
@@ -293,18 +318,6 @@ class WallFollowController:
         else:
             self._last_wall_seen_s = now_s
             self._opening_start_s = None
-        front_candidates = [
-            x_m - cfg.body_front_m
-            for x_m, y_m, bearing in points
-            if x_m > cfg.body_front_m
-            and abs(bearing) <= cfg.front_sector_half_angle_rad
-            and abs(y_m) <= cfg.front_corridor_half_width_m
-        ]
-        front_clearance = min(front_candidates) if front_candidates else None
-        front_ttc = None
-        if front_clearance is not None and self._speed > 0.02:
-            front_ttc = front_clearance / self._speed
-
         diag = ControllerDiagnostics(
             "TRACKING",
             "tracking",
@@ -317,11 +330,6 @@ class WallFollowController:
             header_age,
             receive_age,
         )
-        if front_clearance is not None and front_clearance <= cfg.front_stop_clearance_m:
-            return self._stop(scan, now_s, "front_clearance_stop", diag)
-        if front_ttc is not None and front_ttc <= cfg.front_ttc_stop_s:
-            return self._stop(scan, now_s, "front_ttc_stop", diag)
-
         self._recovery_count += 1
         if not self._motion_enabled and self._recovery_count < cfg.recovery_valid_frames:
             # Keep the control clock advancing during the recovery gate so the
