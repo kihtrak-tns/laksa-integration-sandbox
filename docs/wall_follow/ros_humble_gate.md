@@ -120,7 +120,7 @@ sudo docker compose -f docker-compose.c1.yaml exec -T wall-follow \
 
 The `/sim/laksa/scan` invocation produced no rate line in the supplied
 terminal transcript. The following six averages appeared after the
-`motion_request` invocation:
+`motion_request` invocation in the earlier checkpoint:
 
 ```text
 19.967, 19.977, 19.989, 19.993, 19.991, 20.001 Hz
@@ -128,8 +128,9 @@ terminal transcript. The following six averages appeared after the
 
 Thus the motion-request stream was observed around 20 Hz in that existing
 container. The later rebuilt-service scan windows are recorded below; the
-request-rate observation still belongs to an unidentified older image. The local source branch head
-is `7dd2bcd64a2fa8a406890456dd2795100e74ba91`, but no image rebuild or runtime
+that earlier request-rate observation still belongs to an unidentified image.
+The local source branch head is
+`7dd2bcd64a2fa8a406890456dd2795100e74ba91`, but no image rebuild or runtime
 image/source identity accompanied this observation, so that SHA is not
 attributed as the container's exact tested commit. The collision, rejected
 moving-request/frozen-step, and launch-restart/fresh-episode checks also remain
@@ -197,11 +198,18 @@ was not captured immediately at startup.
 The compact raw capture files are committed beside this record, including the
 initial unavailable-topic response and the later active-episode status in
 `restart_status_initial.yaml`, `restart_status.yaml`, and
-`restart_followup.txt`. The overall ROS gate remains **PARTIAL / UNVERIFIED**: the later Dell
-transcript records scan rates, but the rebuilt-image motion-request rate and
-source-to-image mapping are still unverified. See the
+`restart_followup.txt`. The overall ROS gate remains **PARTIAL / UNVERIFIED**: scan and request rates
+are now observed, but the exact source checkout that produced the rate-test
+image is not established by the saved evidence. `source_sha.txt` records the
+checkout as `b6f5bd0a799e594ea4a47b1ade4179e0586c7d22`; `image_id.txt` records
+`sha256:d128d8d010d1b175a85ec6a97836274ac5c8685008b3bc180382343e4eaac233`
+for the collision container. The measurement command targeted the separate
+`wall-follow` service, and no captured inspection links its container to that
+digest. A repeat run must capture a clean checkout SHA before the build, the
+build command/result, and the image ID from the exact rate-test container. See the
 evidence directory's `collision.log`, status snapshots, `moving_probe.txt`,
-`restart.log`, `restart_followup.txt`, `source_sha.txt`, and `image_id.txt`.
+`restart.log`, `restart_followup.txt`, `source_sha.txt`, `image_id.txt`, and
+`motion_request_hz.txt`.
 The full capture command sequence is in
 [`capture_commands.sh`](../../firmware/esp32-s3/jetson/laksa_speed_race/results/wall_follow_humble_20260928T183631Z/capture_commands.sh).
 
@@ -273,9 +281,9 @@ interval statistics):
 | 10 | 19.995 | 0.043 | 0.055 | 0.00156 | 207 |
 
 These ten windows verify an approximately 20 Hz ROS scan stream in the
-operator's rebuilt container. The earlier 19.967–20.001 Hz motion-request
-observations belonged to an unidentified older image; the request rate has not
-yet been remeasured on the rebuilt image.
+operator's rebuilt container. The new `/sim/laksa/motion_request` measurement is recorded below. It was run
+in the `wall-follow` service after the rebuild, but its container image ID was
+not captured, so its source/image association is not proved.
 
 The operator started a separate simulation-only container named
 `wall-follow-collision` with `collision_test:=true`. Its first supplied
@@ -298,9 +306,11 @@ through 20 nonzero requests, and a distinct active episode after restart in
 isolated Docker simulation. The rejected-request count rose by 105 across the
 status interval; because the controller was also publishing, that delta cannot
 be assigned only to the 20-message probe. No separate applied-motion trace
-was captured. The prior 19.967–20.001 Hz motion-request rate came from an
-unidentified image, so the rebuilt-image request rate and image/source mapping
-remain unverified. Overall state is **PARTIAL / UNVERIFIED**. Real A6 scan
+was captured. The rebuilt service request rate is now observed at 19.968–19.996 Hz. The
+source checkout and image artifacts are recorded separately, without a
+build-time label/log linking them or the inspected collision container to the
+rate-test container; exact tested-image source provenance remains unverified.
+Overall state is **PARTIAL / UNVERIFIED**. Real A6 scan
 replay remains **UNVERIFIED** pending the scan-only export, measured LiDAR
 transform, and recorded request trace. No physical car, device, or
 `/laksa/command` topic was involved.

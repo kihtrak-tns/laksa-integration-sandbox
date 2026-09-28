@@ -35,3 +35,9 @@ sudo docker exec wall-follow-restart /usr/local/bin/c1_entrypoint.sh \
   timeout 20 ros2 topic echo --once /sim/laksa/gym_status \
   > "$GATE_DIR/restart_status.yaml"
 cat "$GATE_DIR/restart_status.yaml"
+
+# Later rate capture on the rebuilt wall-follow service (output saved in
+# motion_request_hz.txt).
+sudo docker compose -f docker-compose.c1.yaml exec -T wall-follow \
+  /usr/local/bin/c1_entrypoint.sh timeout 12 \
+  ros2 topic hz /sim/laksa/motion_request
