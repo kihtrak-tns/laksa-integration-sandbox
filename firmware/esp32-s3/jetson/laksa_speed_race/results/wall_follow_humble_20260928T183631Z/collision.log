@@ -1,0 +1,6 @@
+[INFO] [launch]: All log files can be found below /tmp/ros-logs/2026-09-28-18-09-14-655964-a8ae908d066c-1
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [wall_follow_gym_mock-1]: process started with pid [23]
+[INFO] [wall_follow_controller-2]: process started with pid [25]
+[wall_follow_gym_mock-1] [INFO] [1790618957.440053896] [wall_follow_gym_mock_sim_only]: episode_started id=546acfc1a992492b990639820f420b5b profile=continuous_wall_30in seed=101 collision_test=True initial_x_m=0.150
+[wall_follow_gym_mock-1] [INFO] [1790618963.014121477] [wall_follow_gym_mock_sim_only]: gym_collision: simulator episode latched id=546acfc1a992492b990639820f420b5b gym_steps=1; restart launch to reset

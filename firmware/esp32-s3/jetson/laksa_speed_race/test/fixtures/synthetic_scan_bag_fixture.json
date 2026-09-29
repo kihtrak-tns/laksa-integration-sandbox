@@ -1,0 +1,28 @@
+{
+  "format": "laksa-analytic-scan-bag-v1",
+  "description": "Synthetic right-wall LaserScan sequence; not physical RPLIDAR evidence.",
+  "controller": {
+    "side": -1,
+    "target_wall_distance_m": 0.254,
+    "recovery_valid_frames": 4
+  },
+  "scan": {
+    "frame_id": "sim_laksa_lidar",
+    "beams": 271,
+    "angle_min_rad": -2.356194490192345,
+    "angle_increment_rad": 0.017453292519943295,
+    "range_min_m": 0.0,
+    "range_max_m": 30.0,
+    "sensor_x_m": 0.31542,
+    "sensor_y_m": 0.0,
+    "sensor_yaw_rad": 0.0
+  },
+  "frames": [
+    {"stamp_s": 0.00, "wall_intercept_m": -0.254, "wall_slope": 0.0},
+    {"stamp_s": 0.05, "wall_intercept_m": -0.254, "wall_slope": 0.0},
+    {"stamp_s": 0.10, "wall_intercept_m": -0.254, "wall_slope": 0.0},
+    {"stamp_s": 0.15, "wall_intercept_m": -0.254, "wall_slope": 0.0},
+    {"stamp_s": 0.20, "wall_intercept_m": -0.250, "wall_slope": -0.01},
+    {"stamp_s": 0.25, "wall_intercept_m": -0.246, "wall_slope": -0.01}
+  ]
+}

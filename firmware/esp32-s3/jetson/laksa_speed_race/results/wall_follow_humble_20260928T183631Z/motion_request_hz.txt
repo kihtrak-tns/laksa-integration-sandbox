@@ -1,0 +1,26 @@
+Operator-supplied Dell terminal transcript; 2026-09-28
+Command:
+sudo docker compose -f docker-compose.c1.yaml exec -T wall-follow \
+  /usr/local/bin/c1_entrypoint.sh timeout 12 \
+  ros2 topic hz /sim/laksa/motion_request
+
+average rate: 19.968
+	min: 0.044s max: 0.054s std dev: 0.00194s window: 22
+average rate: 19.978
+	min: 0.044s max: 0.054s std dev: 0.00147s window: 42
+average rate: 19.974
+	min: 0.044s max: 0.054s std dev: 0.00148s window: 62
+average rate: 19.991
+	min: 0.036s max: 0.065s std dev: 0.00276s window: 83
+average rate: 19.996
+	min: 0.036s max: 0.065s std dev: 0.00314s window: 104
+average rate: 19.992
+	min: 0.032s max: 0.067s std dev: 0.00367s window: 124
+average rate: 19.988
+	min: 0.032s max: 0.067s std dev: 0.00344s window: 144
+average rate: 19.994
+	min: 0.032s max: 0.067s std dev: 0.00334s window: 165
+average rate: 19.996
+	min: 0.032s max: 0.067s std dev: 0.00319s window: 186
+average rate: 19.995
+	min: 0.032s max: 0.067s std dev: 0.00336s window: 206

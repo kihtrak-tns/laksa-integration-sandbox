@@ -1,7 +1,13 @@
 build/
 install/
 log/
-results/
+results/*
+!results/wall_follow/
+results/wall_follow/maps/
+!results/wall_follow_20hz/
+results/wall_follow_20hz/maps/
+!results/wall_follow_10mm/
+results/wall_follow_10mm/maps/
 __pycache__/
 .pytest_cache/
 *.pyc

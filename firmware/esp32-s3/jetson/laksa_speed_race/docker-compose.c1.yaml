@@ -40,3 +40,27 @@ services:
       - headless:=true
       - max_laps:=3
       - output_dir:=/results/official
+
+  wall-follow:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.runtime
+    network_mode: none
+    privileged: false
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=512m
+    environment:
+      ROS_LOCALHOST_ONLY: "1"
+      ROS_LOG_DIR: /tmp/ros-logs
+      NUMBA_CACHE_DIR: /tmp/numba
+      XDG_CACHE_HOME: /tmp/cache
+      HOME: /tmp/home
+    command:
+      - ros2
+      - launch
+      - laksa_speed_race
+      - wall_follow_sim.launch.py
+      - map_profile:=continuous_wall_30in
+      - seed:=101

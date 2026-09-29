@@ -1,0 +1,9 @@
+wall-follow-restart Up 6 minutes
+[INFO] [launch]: All log files can be found below /tmp/ros-logs/2026-09-28-18-39-14-686994-4eabcbf4401f-1
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [wall_follow_gym_mock-1]: process started with pid [49]
+[INFO] [wall_follow_controller-2]: process started with pid [51]
+[wall_follow_gym_mock-1] [INFO] [1790620757.710428450] [wall_follow_gym_mock_sim_only]: episode_started id=de3fd4b1a3ec445191473d2cff5073de profile=continuous_wall_30in seed=101 collision_test=False initial_x_m=1.000
+
+data: '{"episode_id": "de3fd4b1a3ec445191473d2cff5073de", "gym_steps": 37209, "rejected_terminal_requests": 0, "terminal_reason": null}'
+---
