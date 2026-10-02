@@ -18,6 +18,19 @@ and offline review. Recording continues after SSH disconnects.
 4. Save a known control-stack commit/config and the physical stop arrangement.
    Do not connect the recording script to an actuator topic.
 
+Preflight saves publisher/QoS details for `/laksa/command`, `/scan`, and
+`/tf_static`, reports duplicate node names, and tries to capture a scan header,
+static TF sample and VESC state. Zero command publishers is expected for
+actuator-disabled reconnaissance; more than one needs investigation. These
+checks are diagnostic and do not certify physical readiness.
+
+Confirm measured base-to-lidar and base-to-camera transforms and one odometry
+authority. A `/tf_static` topic or message does not prove the tree is correct.
+If a transform is missing, save actual frame names and measured mounting
+offsets/orientations for reconstruction at home. Preserve the scans even if
+full mapping cannot yet be replayed. Do not publish guessed transforms or
+add a second authority to an existing tree.
+
 Commands on the Orin (replace paths and run labels as appropriate):
 
 ```bash
@@ -36,6 +49,8 @@ The recorder requires `/scan` and at least 4 GiB free by default; adjust
 `--min-free-gb` if a shorter test and storage budget warrant it. A snapshot
 records the ROS topic graph and host configuration. `stop` sends SIGINT to the
 specific recorder and captures `ros2 bag info` plus recent kernel messages.
+SQLite storage is explicitly selected. A transient-local QoS override for
+`/tf_static` requests retained messages published before recording.
 
 The selected topics include `/scan`, state, VESC, IMU, TF, pose, requested and
 applied command paths, diagnostics, stop and mission state **when advertised**.
@@ -79,6 +94,10 @@ python3 review.py ~/laksa_field_runs/night1-obstacle
 If there is no network, transfer the whole directory by removable drive.
 Do not copy a live SQLite bag. Keep originals on the Orin until the copied
 `metadata.yaml`, `.db3` file(s), and `events.jsonl` have been checked.
+The summary reports counts, spans, average rates, largest receipt-time gaps
+for scan/control/state/odometry topics, and selected topics receiving zero
+messages. Receipt gaps are clues; sensor header timestamps need separate
+inspection. Commands may legitimately be absent during reconnaissance.
 
 ## One-hour visit sequence
 
@@ -87,24 +106,28 @@ Do not copy a live SQLite bag. Keep originals on the Orin until the copied
 | 0–10 | Walk permitted area; measure widths, turn radius hints, obstacle heights, surfaces, slope, lighting; photograph from car-height and overhead with a scale reference. |
 | 10–20 | Parked preflight; start a unique bag; mark a visible clock/video sync event. Confirm data is actually accumulating. |
 | 20–35 | With actuators disabled and sensors powered, move the car slowly along an accessible section for ZED SVO if the existing camera setup can record reliably. A LiDAR/ROS bag can capture geometry while walking. |
-| 35–45 | If and only if the car-side stop and control checks have already passed, perform the team's approved bounded low-speed run with an observer. Record start, turn, stop, and incident events. |
+| 35–45 | Continue stationary scans at each section and collect missing dimensions. Keep actuators disabled throughout visit one. |
 | 45–60 | Park, stop recording, inspect `bag info`, copy, photograph final configuration and any contact marks. |
 
-If physical motion checks are incomplete, use the whole visit for geometry,
-perception, localization, and timing data with no motor commands. Night photos
+Use visit one for geometry, perception, localization, and timing data with no
+motor commands. Manually pushed wheel odometry is not ground truth; annotate
+the collection mode. Night photos
 are for geometry and annotations; daylight camera performance needs a new
 daylight observation. Do not infer a physical stop from a ROS status topic.
 
 ## Home review and second visit
 
 First check time coverage, nonzero topic counts, and event notes. Then inspect
-the first failed turn or gap in time: original `/scan`, pose/TF, candidate
-versus `/laksa/command`, VESC state and health/agent logs. Compare car width
+weak scan geometry, pose/TF consistency and data gaps in each section, along
+with VESC state and health/agent logs. If command data exists, compare candidate
+versus `/laksa/command` without replaying it onto the car. Compare car width
 and course clearance with the photos and measurements. Make one hypothesis,
 one proposed adjustment, and an explicit check for visit two. Prefer a repeat
 of the same short segment at the same speed to distinguish a real improvement
 from a different trajectory. A second visit can instead sample the other course
 if visit one's result is clear and access permits it.
+Any powered drive on visit two requires the team's independently verified
+physical stop and bounded control path; the recorder does not establish either.
 
 Never replay recorded `/laksa/command` into a connected physical ROS graph.
 Run bag replay and controller experiments on the Dell in an isolated ROS domain
