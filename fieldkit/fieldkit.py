@@ -2,6 +2,7 @@
 """Offline, read-only LAKSA ROS 2 field recorder for the Orin (Python 3.10+)."""
 
 import argparse
+from collections import Counter
 from datetime import datetime, timezone
 import json
 import os
@@ -83,11 +84,23 @@ def snapshot(folder, env, git_dir=None):
         "topics": run(["ros2", "topic", "list", "-t"], env, 20),
         "ros_domain_id": env.get("ROS_DOMAIN_ID", "0"),
         "rmw_implementation": env.get("RMW_IMPLEMENTATION", "default"),
+        "command_endpoints": run(["ros2", "topic", "info", "/laksa/command", "--verbose"], env, 10),
+        "static_tf_endpoints": run(["ros2", "topic", "info", "/tf_static", "--verbose"], env, 10),
+        "scan_endpoints": run(["ros2", "topic", "info", "/scan", "--verbose"], env, 10),
+        "scan_header": run(["ros2", "topic", "echo", "/scan", "--once", "--field", "header",
+                            "--qos-reliability", "best_effort"], env, 4),
+        "static_tf_sample": run(["ros2", "topic", "echo", "/tf_static", "--once",
+                                 "--qos-durability", "transient_local", "--qos-reliability", "reliable"], env, 4),
+        "vesc_sample": run(["ros2", "topic", "echo", "/laksa/vesc/state", "--once",
+                            "--qos-reliability", "best_effort"], env, 4),
     }
+    counts = Counter(checks["nodes"]["stdout"].splitlines())
+    checks["duplicate_node_names"] = [name for name, count in counts.items() if count > 1]
     if git_dir:
         checks["git_head"] = run(["git", "-C", str(git_dir), "rev-parse", "HEAD"])
         checks["git_status"] = run(["git", "-C", str(git_dir), "status", "--short"])
     write_json(folder / "snapshot.json", checks)
+    return checks
 
 
 def state_path(folder):
@@ -126,11 +139,16 @@ def main():
         root.mkdir(parents=True, exist_ok=True)
         env = environment(["/opt/ros/humble/setup.bash"] + args.setup)
         result, seen, selected = discover(env)
-        snapshot(root, env, args.git_dir)
+        checks = snapshot(root, env, args.git_dir)
         print("Detected", len(seen), "topics; selected", len(selected), "for recording:")
         print("\n".join(selected))
         print("Missing core topics:", ", ".join(t for t in ("/scan", "/laksa/state", "/laksa/vesc/state") if t not in selected) or "none")
         print("Available GiB:", round(shutil.disk_usage(root).free / 2**30, 2))
+        match = re.search(r"Publisher count:\s*(\d+)", checks["command_endpoints"]["stdout"])
+        print("/laksa/command publisher count:", match.group(1) if match else "unknown; inspect snapshot.json")
+        print("Duplicate node names:", checks["duplicate_node_names"] or "none reported")
+        if "/tf_static" not in selected:
+            print("WARNING: /tf_static not found. Save measured sensor mounting and frame names; do not invent transforms.")
         return
     if not NAME_RE.fullmatch(args.name):
         parser.error("name must be 1-56 letters, digits, hyphens or underscores")
@@ -152,9 +170,13 @@ def main():
         folder.mkdir()
         snapshot(folder, env, args.git_dir)
         write_json(folder / "topics_at_start.json", {"available": seen, "selected": selected})
+        # Request historical static transforms from transient-local publishers.
+        qos_path = folder / "record_qos.yaml"
+        qos_path.write_text("/tf_static:\n  reliability: reliable\n  durability: transient_local\n  history: keep_last\n  depth: 100\n")
         log = (folder / "recorder.log").open("w")
         try:
-            proc = subprocess.Popen(["ros2", "bag", "record", "-o", str(folder / "bag"), *selected],
+            proc = subprocess.Popen(["ros2", "bag", "record", "-s", "sqlite3", "-o", str(folder / "bag"),
+                                     "--qos-profile-overrides-path", str(qos_path), *selected],
                                     env=env, stdin=subprocess.DEVNULL, stdout=log,
                                     stderr=subprocess.STDOUT, start_new_session=True)
         finally:
