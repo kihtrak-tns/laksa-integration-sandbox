@@ -194,6 +194,8 @@ def main():
                                            environment(["/opt/ros/humble/setup.bash"] + args.setup), 25),
             "disk": run(["df", "-h", str(folder)]),
             "kernel_recent": run(["journalctl", "-k", "-b", "--since", state["started_utc"], "--no-pager"], timeout=20),
+            "agent_events": run(["journalctl", "-b", "--since", state["started_utc"],
+                                 "--no-pager", "--grep", "micro_ros|Micro XRCE|create_client|delete_client|destroy_session|ttyACM"], timeout=20),
         })
         print("Stopped; inspect", folder / "postflight.json", "and", folder / "recorder.log")
         return
