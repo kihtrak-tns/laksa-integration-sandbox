@@ -1,0 +1,77 @@
+{
+  "baseline": {
+    "corner_completion": {
+      "collisions": 0,
+      "completed": 15,
+      "minimum_estimated_clearance_m": 0.0737381147259144,
+      "passed": 15,
+      "runs": 15
+    },
+    "corridor_traversal": {
+      "collisions": 0,
+      "completed": 60,
+      "minimum_estimated_clearance_m": 0.048338127314415225,
+      "passed": 60,
+      "runs": 60
+    },
+    "fault_stop_or_recovery": {
+      "collisions": 0,
+      "completed": 1,
+      "minimum_estimated_clearance_m": 0.09771440532999032,
+      "passed": 8,
+      "runs": 8
+    },
+    "safe_stop": {
+      "collisions": 0,
+      "completed": 0,
+      "minimum_estimated_clearance_m": 0.07568218797552673,
+      "passed": 2,
+      "runs": 2
+    }
+  },
+  "baseline_config_sha256": "b1fa0b84e1b36a947eae3f59dfb55651fc50a74684aa6534b4280e14698913e7",
+  "baseline_source_sha_declared": "290a2f3b22b3dc12443535fec7d2545e47ca5dcf",
+  "candidate": {
+    "corner_completion": {
+      "collisions": 0,
+      "completed": 15,
+      "minimum_estimated_clearance_m": 0.0737381147259144,
+      "passed": 15,
+      "runs": 15
+    },
+    "corridor_traversal": {
+      "collisions": 0,
+      "completed": 60,
+      "minimum_estimated_clearance_m": 0.048338127314415225,
+      "passed": 60,
+      "runs": 60
+    },
+    "fault_stop_or_recovery": {
+      "collisions": 0,
+      "completed": 1,
+      "minimum_estimated_clearance_m": 0.09771440532999032,
+      "passed": 8,
+      "runs": 8
+    },
+    "safe_stop": {
+      "collisions": 0,
+      "completed": 0,
+      "minimum_estimated_clearance_m": 0.07568218797552673,
+      "passed": 2,
+      "runs": 2
+    }
+  },
+  "candidate_config_sha256": "b1fa0b84e1b36a947eae3f59dfb55651fc50a74684aa6534b4280e14698913e7",
+  "candidate_source_sha_declared": "2146354b08e98a7e86015d0de97bc909aeaf295a",
+  "gate": "PASS",
+  "limitations": [
+    "Manifests declare source hashes but do not attest the build or installed Gym image.",
+    "Perimeter clearance is sampled, and simulation does not validate physical stopping.",
+    "A safe stop is not a completed route; these campaigns contain no race lap."
+  ],
+  "map_comparison": "verified_lf_vs_crlf",
+  "matched_cases": 85,
+  "regressions": [],
+  "schema_version": "laksa-wall-follow-comparison-v1",
+  "scope": "paired_simulation_only"
+}
