@@ -60,3 +60,5 @@ Run the pinned-Gym campaign using the command in the integration note. Current
 evidence remains in `results/wall_follow_20hz`, and original 100 Hz evidence
 remains in `results/wall_follow` for comparison. Generated map images are
 omitted because the deterministic generator and SHA-256 values are committed.
+Paired baseline/candidate analysis is documented in
+`docs/wall_follow/paired_campaigns.md` at repository root.
